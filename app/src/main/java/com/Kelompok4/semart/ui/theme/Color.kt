@@ -2,10 +2,16 @@ package com.Kelompok4.semart.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+val PrimaryBlue = Color(0xFF3B9DF8)
+val SecondaryBlue = Color(0xFF62B5FF)
+val HoverBlue = Color(0xFF2A89E5)
+val LightBlue = Color(0xFFDCEEFF)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+val BackgroundBlue = Color(0xFFF3F9FF)
+
+val DarkText = Color(0xFF243447)
+val GrayText = Color(0xFF6B7280)
+
+val BorderGray = Color(0xFFE5E7EB)
+
+val White = Color(0xFFFFFFFF)
