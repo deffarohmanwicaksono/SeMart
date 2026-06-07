@@ -7,13 +7,16 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -34,6 +38,7 @@ import java.util.Locale
 // ==========================================
 // MODEL DATA & ENUM
 // ==========================================
+
 enum class ChatRowType {
     TEXT_MESSAGE,
     ACTIVE_LINK,
@@ -45,37 +50,65 @@ data class MessageData(
     val text: String,
     val time: String,
     val isUser: Boolean,
-    val type: ChatRowType = ChatRowType.TEXT_MESSAGE
+    val type: ChatRowType = ChatRowType.TEXT_MESSAGE,
+    val productName: String? = null,
+    val productPrice: String? = null
 )
 
 fun getBubbleShape(isUser: Boolean): RoundedCornerShape {
     return if (isUser) {
-        RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 2.dp)
+        RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 4.dp)
     } else {
-        RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 2.dp, bottomEnd = 16.dp)
+        RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 4.dp, bottomEnd = 16.dp)
     }
 }
 
 // ==========================================
-// HALAMAN UTAMA: CHAT DETAIL SCREEN
+// CHAT DETAIL SCREEN
 // ==========================================
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatDetailScreen(
     onBackClick: () -> Unit,
-    onNavigateToCheckout: () -> Unit) {
+    onNavigateToCheckout: () -> Unit
+) {
     var messageText by remember { mutableStateOf("") }
+    val listState = rememberLazyListState()
 
     val conversation = remember {
         mutableStateListOf(
             MessageData(1, "Halo, apakah Jaket Denim Pria nya masih ada kak?", "14:30", isUser = true),
             MessageData(2, "Iya kak, masih ada kok 😊", "14:31", isUser = false),
             MessageData(3, "Boleh kirim link pembayarannya kak? Mau langsung saya checkout", "14:32", isUser = true),
-            MessageData(4, "semart.app/p/jeans-jacket-123", "14:33", isUser = false, type = ChatRowType.ACTIVE_LINK),
-            MessageData(5, "Sesi transaksi ini telah berakhir", "Kemarin", isUser = false, type = ChatRowType.EXPIRED_LINK),
-            // ✨ Update Skenario Baru
+            MessageData(
+                id = 4,
+                text = "semart.app/p/jeans-jacket-123",
+                time = "14:33",
+                isUser = false,
+                type = ChatRowType.ACTIVE_LINK,
+                productName = "Laptop Lenovo Thinkpad Bekas",
+                productPrice = "Rp 3.500.000"
+            ),
+            MessageData(
+                id = 5,
+                text = "Sesi transaksi ini telah berakhir",
+                time = "Kemarin",
+                isUser = false,
+                type = ChatRowType.EXPIRED_LINK,
+                productName = "Laptop Lenovo Thinkpad Bekas",
+                productPrice = "Rp 3.500.000"
+            ),
             MessageData(6, "Kak, minta link-nya lagi dong, yang barusan kedaluwarsa", "10:00", isUser = true),
-            MessageData(7, "semart.app/p/jeans-jacket-456", "10:01", isUser = false, type = ChatRowType.ACTIVE_LINK)
+            MessageData(
+                id = 7,
+                text = "semart.app/p/jeans-jacket-456",
+                time = "10:01",
+                isUser = false,
+                type = ChatRowType.ACTIVE_LINK,
+                productName = "Laptop Lenovo Thinkpad Bekas",
+                productPrice = "Rp 3.500.000"
+            )
         )
     }
 
@@ -84,7 +117,7 @@ fun ChatDetailScreen(
         topBar = {
             Surface(
                 color = Color.White,
-                modifier = Modifier.border(1.dp, Color(0xFFE2E8F0))
+                shadowElevation = 1.dp
             ) {
                 Row(
                     modifier = Modifier
@@ -94,59 +127,72 @@ fun ChatDetailScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Kembali", tint = DarkText)
+                        Icon(
+                            imageVector = Icons.Filled.ArrowBack,
+                            contentDescription = "Kembali",
+                            tint = DarkText
+                        )
                     }
 
+                    // Avatar penjual — pakai drawable login_illustration
                     Image(
                         painter = painterResource(id = R.drawable.login_illustration),
-                        contentDescription = "Foto Produk",
+                        contentDescription = "Foto Penjual",
                         modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFFF1F5F9))
-                            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(8.dp)),
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFF1F5F9)),
                         contentScale = ContentScale.Crop
                     )
 
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
 
                     Column(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = "Andi Pratama (Penjual)",
+                            text = "Nurul Janati",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = DarkText,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                        Spacer(modifier = Modifier.height(1.dp))
-                        Text(
-                            text = "Jaket Denim Pria",
-                            fontSize = 11.sp,
-                            color = PrimaryBlue,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Filled.Store,
+                                contentDescription = null,
+                                tint = PrimaryBlue,
+                                modifier = Modifier.size(11.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = "Laptop Lenovo Thinkpad Bekas",
+                                fontSize = 11.sp,
+                                color = PrimaryBlue,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }
         },
         bottomBar = {
+            // POV Buyer: hanya input pesan, tanpa banner kirim link
             Surface(
                 color = Color.White,
+                shadowElevation = 4.dp,
                 modifier = Modifier
                     .navigationBarsPadding()
                     .imePadding()
-                    .border(1.dp, Color(0xFFE2E8F0))
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     OutlinedTextField(
@@ -154,41 +200,51 @@ fun ChatDetailScreen(
                         onValueChange = { messageText = it },
                         modifier = Modifier
                             .weight(1f)
-                            .heightIn(min = 46.dp),
-                        placeholder = { Text("Tulis pesan ke penjual...", fontSize = 13.sp, color = GrayText) },
-                        textStyle = LocalTextStyle.current.copy(fontSize = 13.sp, color = DarkText),
+                            .heightIn(min = 44.dp),
+                        placeholder = {
+                            Text(
+                                text = "Tulis pesan...",
+                                fontSize = 13.sp,
+                                color = GrayText
+                            )
+                        },
+                        textStyle = LocalTextStyle.current.copy(
+                            fontSize = 13.sp,
+                            color = DarkText
+                        ),
                         shape = RoundedCornerShape(24.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = Color(0xFFF1F5F9),
                             unfocusedContainerColor = Color(0xFFF1F5F9),
-                            focusedBorderColor = PrimaryBlue.copy(alpha = 0.5f),
+                            focusedBorderColor = PrimaryBlue.copy(alpha = 0.4f),
                             unfocusedBorderColor = Color.Transparent
                         ),
                         singleLine = false,
                         maxLines = 4
                     )
 
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
 
-                    IconButton(
-                        onClick = {
-                            if (messageText.isNotBlank()) {
-                                val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+                    val canSend = messageText.isNotBlank()
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(CircleShape)
+                            .background(if (canSend) PrimaryBlue else Color(0xFFE2E8F0))
+                            .clickable(enabled = canSend) {
+                                val currentTime =
+                                    SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
                                 conversation.add(
                                     MessageData(
                                         id = conversation.size + 1,
-                                        text = messageText,
+                                        text = messageText.trim(),
                                         time = currentTime,
                                         isUser = true
                                     )
                                 )
                                 messageText = ""
-                            }
-                        },
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(CircleShape)
-                            .background(if (messageText.isNotBlank()) PrimaryBlue else Color(0xFFE2E8F0))
+                            },
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Send,
@@ -202,61 +258,35 @@ fun ChatDetailScreen(
         }
     ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(conversation) { message ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = if (message.isUser) Arrangement.End else Arrangement.Start,
-                    verticalAlignment = Alignment.Bottom
-                ) {
-                    // SELLER AVATAR
-                    if (!message.isUser) {
-                        Image(
-                            painter = painterResource(id = R.drawable.login_illustration),
-                            contentDescription = "Avatar Penjual",
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFFE2E8F0)),
-                            contentScale = ContentScale.Crop
+                when (message.type) {
+                    ChatRowType.TEXT_MESSAGE -> {
+                        ChatBubbleRow(message = message)
+                    }
+                    ChatRowType.ACTIVE_LINK -> {
+                        PurchaseLinkCard(
+                            isExpired = false,
+                            productName = message.productName ?: "",
+                            productPrice = message.productPrice ?: "",
+                            time = message.time,
+                            onCheckout = onNavigateToCheckout
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
                     }
-
-                    Box(
-                        modifier = Modifier.weight(1f, fill = false),
-                        contentAlignment = if (message.isUser) Alignment.CenterEnd else Alignment.CenterStart
-                    ) {
-                        when (message.type) {
-                            ChatRowType.TEXT_MESSAGE -> {
-                                ChatBubbleContent(text = message.text, time = message.time, isUser = message.isUser)
-                            }
-                            ChatRowType.ACTIVE_LINK -> {
-                                SystemLinkMessageContent(isExpired = false, urlText = message.text, isUser = message.isUser, onNavigate = { onNavigateToCheckout() })
-                            }
-                            ChatRowType.EXPIRED_LINK -> {
-                                SystemLinkMessageContent(isExpired = true, urlText = message.text, isUser = message.isUser)
-                            }
-                        }
-                    }
-
-                    // BUYER AVATAR
-                    if (message.isUser) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(PrimaryBlue),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("K", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                        }
+                    ChatRowType.EXPIRED_LINK -> {
+                        PurchaseLinkCard(
+                            isExpired = true,
+                            productName = message.productName ?: "",
+                            productPrice = message.productPrice ?: "",
+                            time = message.time,
+                            onCheckout = {}
+                        )
                     }
                 }
             }
@@ -265,7 +295,66 @@ fun ChatDetailScreen(
 }
 
 // ==========================================
-// SUB-KOMPONEN KONTEN CHAT
+// CHAT BUBBLE ROW
+// ==========================================
+
+@Composable
+fun ChatBubbleRow(message: MessageData) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = if (message.isUser) Arrangement.End else Arrangement.Start,
+        verticalAlignment = Alignment.Bottom
+    ) {
+        if (!message.isUser) {
+            // Avatar penjual
+            Image(
+                painter = painterResource(id = R.drawable.login_illustration),
+                contentDescription = "Avatar Penjual",
+                modifier = Modifier
+                    .size(30.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFE2E8F0)),
+                contentScale = ContentScale.Crop
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+        }
+
+        Box(
+            modifier = Modifier
+                .weight(1f, fill = false)
+                .widthIn(max = 250.dp),
+            contentAlignment = if (message.isUser) Alignment.CenterEnd else Alignment.CenterStart
+        ) {
+            ChatBubbleContent(
+                text = message.text,
+                time = message.time,
+                isUser = message.isUser
+            )
+        }
+
+        if (message.isUser) {
+            Spacer(modifier = Modifier.width(8.dp))
+            // Avatar buyer
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFDBEAFE)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Person,
+                    contentDescription = "Avatar Buyer",
+                    tint = PrimaryBlue,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+    }
+}
+
+// ==========================================
+// CHAT BUBBLE CONTENT
 // ==========================================
 
 @Composable
@@ -273,73 +362,177 @@ fun ChatBubbleContent(text: String, time: String, isUser: Boolean) {
     Surface(
         color = if (isUser) PrimaryBlue else Color.White,
         shape = getBubbleShape(isUser),
-        shadowElevation = 0.5.dp,
-        modifier = Modifier.widthIn(max = 260.dp)
+        shadowElevation = 1.dp
     ) {
-        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
             Text(
                 text = text,
                 color = if (isUser) Color.White else DarkText,
-                fontSize = 13.5.sp,
-                lineHeight = 19.sp
+                fontSize = 13.sp,
+                lineHeight = 18.sp
             )
-            Spacer(modifier = Modifier.height(3.dp))
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = time,
-                fontSize = 9.5.sp,
-                color = if (isUser) Color.White.copy(alpha = 0.75f) else GrayText,
+                fontSize = 10.sp,
+                color = if (isUser) Color.White.copy(alpha = 0.7f) else GrayText,
                 modifier = Modifier.align(Alignment.End)
             )
         }
     }
 }
 
+// ==========================================
+// PURCHASE LINK CARD — tampil di tengah
+// ==========================================
+
 @Composable
-fun SystemLinkMessageContent(isExpired: Boolean, urlText: String, isUser: Boolean, onNavigate: () -> Unit = {}) {
-    val cardBg = if (isExpired) Color(0xFFFEE2E2) else SoftBlueBg
-    val strokeColor = if (isExpired) Color(0xFFFCA5A5) else Color(0xFFBFDBFE)
-    val titleColor = if (isExpired) Color(0xFFDC2626) else PrimaryBlue
-
-    Surface(
-        shape = getBubbleShape(isUser),
-        color = cardBg,
-        modifier = Modifier
-            .widthIn(max = 260.dp)
-            .border(1.dp, strokeColor, getBubbleShape(isUser))
-            .clickable(
-                enabled = !isExpired,
-                onClick = { onNavigate() }
-            )
+fun PurchaseLinkCard(
+    isExpired: Boolean,
+    productName: String,
+    productPrice: String,
+    time: String,
+    onCheckout: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color.White,
+            shadowElevation = 2.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(
+                    width = 1.dp,
+                    color = Color(0xFFE2E8F0),
+                    shape = RoundedCornerShape(16.dp)
+                )
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = if (isExpired) "Tautan Kedaluwarsa" else "Tautan Pembelian Resmi",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.5.sp,
-                    color = titleColor
+            Column {
+                // ── Bagian atas: gambar + info produk ──
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    // Thumbnail produk
+                    Image(
+                        painter = painterResource(id = R.drawable.login_illustration),
+                        contentDescription = "Gambar Produk",
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFFF1F5F9)),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        // Nama produk — coret jika expired
+                        Text(
+                            text = productName,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (isExpired) GrayText else DarkText,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            textDecoration = if (isExpired) TextDecoration.LineThrough else TextDecoration.None
+                        )
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        // Harga
+                        Text(
+                            text = productPrice,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isExpired) GrayText else PrimaryBlue
+                        )
+
+                        if (isExpired) {
+                            Spacer(modifier = Modifier.height(5.dp))
+                            // Label "Link Kadaluwarsa" — pakai biru abu, bukan merah
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Filled.Info,
+                                    contentDescription = null,
+                                    tint = GrayText,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Link Kadaluwarsa",
+                                    fontSize = 11.sp,
+                                    color = GrayText,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Divider
+                Divider(
+                    color = Color(0xFFE2E8F0),
+                    thickness = 1.dp
                 )
-                Spacer(modifier = Modifier.height(3.dp))
-                Text(
-                    text = urlText,
-                    fontSize = 12.sp,
-                    color = DarkText,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+
+                // ── Tombol bawah ──
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            color = if (isExpired) Color(0xFFF1F5F9) else Color.White,
+                            shape = RoundedCornerShape(
+                                bottomStart = 16.dp,
+                                bottomEnd = 16.dp
+                            )
+                        )
+                        .clickable(enabled = !isExpired) { onCheckout() }
+                        .padding(vertical = 14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isExpired) {
+                        Text(
+                            text = "Sesi Berakhir",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = GrayText
+                        )
+                    } else {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "Lanjut ke Pembayaran",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = PrimaryBlue
+                            )
+                            Spacer(modifier = Modifier.width(2.dp))
+                            Icon(
+                                imageVector = Icons.Filled.ChevronRight,
+                                contentDescription = null,
+                                tint = PrimaryBlue,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
             }
-
-            Spacer(modifier = Modifier.width(6.dp))
-
-            Icon(
-                imageVector = if (isExpired) Icons.Filled.Clear else Icons.Filled.ChevronRight,
-                contentDescription = null,
-                tint = titleColor.copy(alpha = 0.7f),
-                modifier = Modifier.size(18.dp)
-            )
         }
+
+        // Timestamp di bawah card
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = time,
+            fontSize = 10.sp,
+            color = GrayText
+        )
     }
 }
