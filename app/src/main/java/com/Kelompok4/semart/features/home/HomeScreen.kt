@@ -20,7 +20,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -31,7 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.Kelompok4.semart.R
 
-// Konstanta Warna Konsisten SeMart
+// Konstanta Warna SeMart
 val PrimaryBlue = Color(0xFF3B9DF8)
 val DarkText = Color(0xFF243447)
 val GrayText = Color(0xFF6B7280)
@@ -43,7 +42,10 @@ val SoftBlueBg = Color(0xFFF3F9FF)
 fun HomeScreen(
     onSearchClick: () -> Unit = {},
     onProductClick: (Int) -> Unit = {},
-    onChatClick: () -> Unit = {}
+    onChatClick: () -> Unit = {},
+    onProfileClick: () -> Unit = {},
+    onWishlistClick: () -> Unit = {},
+    onNotificationClick: () -> Unit = {}
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("Semua") }
@@ -52,7 +54,7 @@ fun HomeScreen(
     var sortMenuExpanded by remember { mutableStateOf(false) }
     var selectedSort by remember { mutableStateOf("Terbaru") }
 
-    val categories = listOf("Semua", "Elektronik", "Buku", "Fashion", "Perlengkapan", "Fasilitas Kos")
+    val categories = listOf("Semua", "Elektronik", "Buku", "Perlengkapan Kos", "Fashion", "Olahraga", "Hobi", "Kecantikan", "Lainnya")
     val sortOptions = listOf("Termurah", "Termahal", "Terbaru", "Terlama")
 
     Scaffold(
@@ -70,10 +72,10 @@ fun HomeScreen(
                     )
                 },
                 actions = {
-                    IconButton(onClick = { /* Navigasi ke Wishlist */ }) {
+                    IconButton(onClick = { onWishlistClick() }) {
                         Icon(Icons.Outlined.FavoriteBorder, contentDescription = "Wishlist", tint = DarkText)
                     }
-                    IconButton(onClick = { /* Navigasi ke Notifikasi */ }) {
+                    IconButton(onClick = { onNotificationClick() }) {
                         Icon(Icons.Outlined.Notifications, contentDescription = "Notifikasi", tint = DarkText)
                     }
                 },
@@ -83,7 +85,7 @@ fun HomeScreen(
         bottomBar = {
             Surface(
                 color = Color.White,
-                tonalElevation = 8.dp,
+                shadowElevation = 8.dp,
                 modifier = Modifier
                     .fillMaxWidth()
                     .border(1.dp, BorderGray, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
@@ -96,57 +98,18 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.SpaceAround,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Menu Beranda
-                    NavItemManual(
-                        selected = true,
-                        icon = Icons.Filled.Home,
-                        label = "Beranda"
-                    )
-
-                    // Menu Cari
-                    NavItemManual(
-                        selected = false,
-                        icon = Icons.Filled.Search,
-                        label = "Cari",
-                        onClick = onSearchClick
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .clickable { /* Navigasi Halaman Jual Barang */ },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(PrimaryBlue),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(Icons.Filled.Add, contentDescription = "Jual", tint = Color.White, modifier = Modifier.size(26.dp))
-                            }
-                            Spacer(modifier = Modifier.height(3.dp))
-                            Text("Jual", fontSize = 10.sp, color = GrayText, fontWeight = FontWeight.Medium)
-                        }
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        NavItemManual(selected = true, icon = Icons.Filled.Home, label = "Beranda")
                     }
-
-                    // Menu Chat
-                    NavItemManual(
-                        selected = false,
-                        icon = Icons.Filled.Chat,
-                        label = "Chat",
-                        onClick = onChatClick
-                    )
-
-                    // Menu Profil
-                    NavItemManual(
-                        selected = false,
-                        icon = Icons.Filled.Person,
-                        label = "Profil"
-                    )
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        NavItemManual(selected = false, icon = Icons.Filled.Search, label = "Cari", onClick = onSearchClick)
+                    }
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        NavItemManual(selected = false, icon = Icons.Filled.Chat, label = "Chat", onClick = onChatClick)
+                    }
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        NavItemManual(selected = false, icon = Icons.Filled.Person, label = "Profil", onClick = onProfileClick)
+                    }
                 }
             }
         }
@@ -162,57 +125,71 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
 
-            // SECTION ATAS (BANNER, KATEGORI, & FILTER URUTKAN)
             item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                 Column {
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // Search Bar Utama
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        textStyle = LocalTextStyle.current.copy(fontSize = 13.sp, color = DarkText),
-                        placeholder = { Text("Cari barang kos atau kuliah...", fontSize = 13.sp, color = GrayText) },
-                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null, tint = GrayText) },
+                    Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(50.dp)
+                            .height(52.dp)
+                            .clip(RoundedCornerShape(12.dp))
                             .clickable { onSearchClick() },
-                        enabled = false,
-                        shape = RoundedCornerShape(10.dp),
-                        colors = TextFieldDefaults.colors(
-                            disabledContainerColor = Color(0xFFF8FAFC),
-                            disabledIndicatorColor = BorderGray,
-                            disabledPlaceholderColor = GrayText,
-                            disabledLeadingIconColor = GrayText
-                        ),
-                        singleLine = true
-                    )
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color.White,
+                        shadowElevation = 2.dp,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderGray)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Search,
+                                contentDescription = "Search",
+                                tint = PrimaryBlue,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "Cari barang kos atau kuliah...",
+                                fontSize = 13.sp,
+                                color = GrayText,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(SoftBlueBg),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.List,
+                                    contentDescription = "Options",
+                                    tint = PrimaryBlue,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
 
-                    // HERO BANNER
+                    // Hero Banner
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(130.dp)
                             .clip(RoundedCornerShape(14.dp))
-                            .background(
-                                brush = Brush.linearGradient(
-                                    colors = listOf(Color(0xFF3B9DF8), Color(0xFF62B5FF))
-                                )
-                            )
                     ) {
                         Image(
-                            painter = painterResource(id = R.drawable.login_illustration),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .width(150.dp)
-                                .align(Alignment.CenterEnd),
-                            contentScale = ContentScale.Fit
+                            painter = painterResource(id = R.drawable.banner_home),
+                            contentDescription = "Promo Banner",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
                         )
-
                         Column(
                             modifier = Modifier
                                 .fillMaxHeight()
@@ -220,29 +197,28 @@ fun HomeScreen(
                             verticalArrangement = Arrangement.Center
                         ) {
                             Text(
-                                text = "Beli Barang Hemat\nJual Barang Cepat!",
+                                text = "Beli Barang Hemat\nCari Barang Cepat!",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White,
+                                color = PrimaryBlue,
                                 lineHeight = 20.sp
                             )
                             Spacer(modifier = Modifier.height(10.dp))
-
                             Button(
-                                onClick = { /* Aksi Jual */ },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                                onClick = onSearchClick,
+                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
                                 shape = RoundedCornerShape(8.dp),
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                                 modifier = Modifier.height(32.dp)
                             ) {
-                                Text("Jual Sekarang", color = PrimaryBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text("Jelajahi Sekarang", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
 
                     Spacer(modifier = Modifier.height(18.dp))
 
-                    // PILIHAN KATEGORI (Horizontal Scroll Row)
+                    // Pilihan Kategori
                     Text("Kategori", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = DarkText)
                     Spacer(modifier = Modifier.height(8.dp))
                     LazyRow(
@@ -254,15 +230,20 @@ fun HomeScreen(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(20.dp))
-                                    .background(if (isSelected) PrimaryBlue else Color(0xFFF1F5F9))
+                                    .background(if (isSelected) PrimaryBlue else Color.White)
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (isSelected) Color.Transparent else PrimaryBlue,
+                                        shape = RoundedCornerShape(20.dp)
+                                    )
                                     .clickable { selectedCategory = category }
                                     .padding(horizontal = 14.dp, vertical = 6.dp)
                             ) {
                                 Text(
                                     text = category,
                                     fontSize = 12.sp,
-                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                    color = if (isSelected) Color.White else DarkText
+                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                                    color = if (isSelected) Color.White else PrimaryBlue
                                 )
                             }
                         }
@@ -270,7 +251,7 @@ fun HomeScreen(
 
                     Spacer(modifier = Modifier.height(18.dp))
 
-                    // SECTION JUDUL & DROPDOWN URUTKAN INTERAKTIF
+                    // Section Title & Dropdown Sort (Diperbarui background jadi biru)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -281,15 +262,17 @@ fun HomeScreen(
                         Box {
                             Row(
                                 modifier = Modifier
-                                    .border(1.dp, BorderGray, RoundedCornerShape(8.dp))
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(PrimaryBlue) // Background menjadi biru
                                     .clickable { sortMenuExpanded = true }
-                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                    .padding(horizontal = 10.dp, vertical = 6.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Filled.FilterList, contentDescription = null, tint = GrayText, modifier = Modifier.size(14.dp))
+                                Icon(Icons.Filled.FilterList, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp)) // Text icon putih
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(selectedSort, fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Medium) // Text putih
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text(selectedSort, fontSize = 11.sp, color = GrayText)
-                                Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = GrayText, modifier = Modifier.size(16.dp))
+                                Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp)) // Dropdown putih
                             }
 
                             DropdownMenu(
@@ -314,7 +297,7 @@ fun HomeScreen(
                 }
             }
 
-            // GRID ITEM PRODUK
+            // Grid Item Produk
             items(6) { index ->
                 var isLiked by remember { mutableStateOf(false) }
 
@@ -333,12 +316,11 @@ fun HomeScreen(
                         3 -> "Rp 120.000"
                         else -> "Rp 50.000"
                     },
-                    itemCondition = when (index) {
-                        0 -> "Sering Dipakai"
-                        1 -> "Seperti Baru"
-                        2 -> "Jarang Dipakai"
-                        3 -> "Minus Pemakaian"
-                        else -> "Bekas Layak Pakai"
+                    itemCondition = when (index % 3) {
+                        0 -> "Bekas Seperti Baru"
+                        1 -> "Bekas Baik"
+                        2 -> "Bekas Layak Pakai"
+                        else -> "Bekas Baik"
                     },
                     isLiked = isLiked,
                     onLikeClick = { isLiked = !isLiked },
@@ -353,7 +335,7 @@ fun HomeScreen(
     }
 }
 
-// KOMPONEN PEMBANTU: Item Navigasi Manual
+// Item Navigasi Manual
 @Composable
 fun NavItemManual(
     selected: Boolean,
@@ -389,7 +371,7 @@ fun NavItemManual(
     }
 }
 
-// COMPONENT REUSABLE: KARTU PRODUK
+// Component Reusable: Product Card
 @Composable
 fun ProductCardItem(
     title: String,

@@ -1,5 +1,6 @@
 package com.Kelompok4.semart.features.chat
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -9,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -47,7 +49,8 @@ data class ChatItemData(
 fun ChatListScreen(
     onBackToHome: () -> Unit = {},
     onSearchClick: () -> Unit = {},
-    onChatDetailClick: (Int) -> Unit = {}
+    onChatDetailClick: (Int) -> Unit = {},
+    onProfileClick: () -> Unit = {}
 ) {
     var searchQuery by remember { mutableStateOf("") }
 
@@ -84,7 +87,7 @@ fun ChatListScreen(
                     // JUDUL UTAMA
                     Text(
                         text = "Chat",
-                        fontSize = 25.sp,
+                        fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         color = DarkText
                     )
@@ -109,81 +112,125 @@ fun ChatListScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // SEARCH BAR
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        textStyle = LocalTextStyle.current.copy(fontSize = 13.sp, color = DarkText),
-                        placeholder = {
-                            Text("Cari nama penjual atau barang...", fontSize = 13.sp, color = GrayText)
-                        },
-                        leadingIcon = {
-                            Icon(Icons.Filled.Search, contentDescription = null, tint = GrayText, modifier = Modifier.size(20.dp))
-                        },
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { searchQuery = "" }) {
-                                    Icon(Icons.Filled.Clear, contentDescription = "Hapus teks", tint = GrayText, modifier = Modifier.size(18.dp))
-                                }
-                            }
-                        },
+                    Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(50.dp),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color(0xFFF8FAFC),
-                            unfocusedContainerColor = Color(0xFFF8FAFC),
-                            focusedIndicatorColor = PrimaryBlue,
-                            unfocusedIndicatorColor = BorderGray
-                        ),
-                        singleLine = true
-                    )
+                            .height(52.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color.White,
+                        border = BorderStroke(1.dp, BorderGray)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Search,
+                                contentDescription = "Search",
+                                tint = PrimaryBlue,
+                                modifier = Modifier.size(22.dp)
+                            )
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            BasicTextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                textStyle = LocalTextStyle.current.copy(
+                                    color = DarkText,
+                                    fontSize = 13.sp
+                                ),
+                                decorationBox = { innerTextField ->
+                                    if (searchQuery.isEmpty()) {
+                                        Text(
+                                            text = "Cari penjual atau barang...",
+                                            color = GrayText,
+                                            fontSize = 13.sp
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            )
+
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(
+                                    onClick = { searchQuery = "" },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Clear,
+                                        contentDescription = "Clear",
+                                        tint = GrayText,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(SoftBlueBg),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.List,
+                                        contentDescription = null,
+                                        tint = PrimaryBlue,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         },
         bottomBar = {
             Surface(
                 color = Color.White,
-                tonalElevation = 8.dp,
+                shadowElevation = 8.dp,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(1.dp, BorderGray, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                    .border(
+                        1.dp,
+                        BorderGray,
+                        RoundedCornerShape(
+                            topStart = 16.dp,
+                            topEnd = 16.dp
+                        )
+                    )
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(72.dp)
                         .padding(horizontal = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceAround,
+                    horizontalArrangement = Arrangement.SpaceAround, // Menyebar menu secara merata
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    ChatNavItemManual(selected = false, icon = Icons.Filled.Home, label = "Beranda", onClick = onBackToHome)
-                    ChatNavItemManual(selected = false, icon = Icons.Filled.Search, label = "Cari", onClick = onSearchClick)
-
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .clickable { /* Navigasi Halaman Jual */ },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(PrimaryBlue),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(Icons.Filled.Add, contentDescription = "Jual", tint = Color.White, modifier = Modifier.size(26.dp))
-                            }
-                            Spacer(modifier = Modifier.height(3.dp))
-                            Text("Jual", fontSize = 10.sp, color = GrayText, fontWeight = FontWeight.Medium)
-                        }
+                    // Menu Beranda
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        ChatNavItemManual(selected = false, icon = Icons.Filled.Home, label = "Beranda", onClick = onBackToHome)
                     }
 
-                    ChatNavItemManual(selected = true, icon = Icons.Filled.Chat, label = "Chat")
-                    ChatNavItemManual(selected = false, icon = Icons.Filled.Person, label = "Profil")
+                    // Menu Cari
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        ChatNavItemManual(selected = false, icon = Icons.Filled.Search, label = "Cari", onClick = onSearchClick)
+                    }
+
+                    // Menu Chat (Aktif - Tombol Jual Dihapus)
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        ChatNavItemManual(selected = true, icon = Icons.Filled.Chat, label = "Chat")
+                    }
+
+                    // Menu Profil
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        ChatNavItemManual(selected = false, icon = Icons.Filled.Person, label = "Profil", onClick = onProfileClick)
+                    }
                 }
             }
         }

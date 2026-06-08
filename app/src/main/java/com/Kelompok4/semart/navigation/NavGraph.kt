@@ -14,6 +14,9 @@ import com.Kelompok4.semart.features.product.ProductDetailScreen
 import com.Kelompok4.semart.features.chat.ChatListScreen
 import com.Kelompok4.semart.features.chat.ChatDetailScreen
 import com.Kelompok4.semart.features.checkout.CheckoutScreen
+import com.Kelompok4.semart.features.profile.ProfileScreen
+import com.Kelompok4.semart.features.wishlist.WishlistScreen
+import com.Kelompok4.semart.features.notification.NotificationScreen
 
 @Composable
 fun NavGraph() {
@@ -39,7 +42,10 @@ fun NavGraph() {
             HomeScreen(
                 onSearchClick = { navController.navigate("search") },
                 onProductClick = { id -> navController.navigate("detail/$id") },
-                onChatClick = { navController.navigate("chat") }
+                onChatClick = { navController.navigate("chat") },
+                onProfileClick = { navController.navigate("profile") },
+                onWishlistClick = { navController.navigate("wishlist") },
+                onNotificationClick = { navController.navigate("notification") }
             )
         }
 
@@ -47,7 +53,8 @@ fun NavGraph() {
             SearchScreen(
                 onBackClick = { navController.popBackStack() },
                 onProductClick = { id -> navController.navigate("detail/$id") },
-                onChatClick = { navController.navigate("chat") }
+                onChatClick = { navController.navigate("chat") },
+                onProfileClick = { navController.navigate("profile") }
             )
         }
 
@@ -55,7 +62,8 @@ fun NavGraph() {
             ChatListScreen(
                 onBackToHome = { navController.navigate("home") { popUpTo("home") { inclusive = true } } },
                 onSearchClick = { navController.navigate("search") },
-                onChatDetailClick = { id -> navController.navigate("chat_detail/$id") }
+                onChatDetailClick = { id -> navController.navigate("chat_detail/$id") },
+                onProfileClick = { navController.navigate("profile") }
             )
         }
 
@@ -79,6 +87,60 @@ fun NavGraph() {
             ChatDetailScreen(
                 onBackClick = { navController.popBackStack() },
                 onNavigateToCheckout = { navController.navigate("checkout") }
+            )
+        }
+
+        composable(route = "profile") {
+            ProfileScreen(
+                onBackClick = { navController.popBackStack() },
+                onHomeClick = {
+                    navController.navigate("home") {
+                        popUpTo("home")
+                        launchSingleTop = true
+                    }
+                },
+                onSearchClick = {
+                    navController.navigate("search") {
+                        launchSingleTop = true
+                    }
+                },
+                onChatClick = {
+                    navController.navigate("chat") {
+                        launchSingleTop = true
+                    }
+                },
+
+                onWishlistClick = { navController.navigate("wishlist") },
+                onNotificationClick = { navController.navigate("notification") }
+            )
+        }
+
+        composable("wishlist") {
+            WishlistScreen(
+                onBackClick = { navController.popBackStack() },
+                onHomeClick = {
+                    navController.navigate("home") {
+                        popUpTo("home") { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+                onSearchClick = { navController.navigate("search") },
+                onChatClick = { navController.navigate("chat") },
+                onProductClick = { id -> navController.navigate("detail/$id") }
+            )
+        }
+
+        composable("notification") {
+            NotificationScreen(
+                onBackClick = { navController.popBackStack() },
+                onHomeClick = {
+                    navController.navigate("home") {
+                        popUpTo("home") { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+                onSearchClick = { navController.navigate("search") },
+                onChatClick = { navController.navigate("chat") }
             )
         }
     }
