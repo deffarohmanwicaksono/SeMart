@@ -1,5 +1,6 @@
 package com.Kelompok4.semart.features.auth
 
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -31,22 +33,40 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.Kelompok4.semart.R
-
-// Konstanta Warna
-val PrimaryBlue = Color(0xFF3B9DF8)
-val DarkText = Color(0xFF1E293B)
-val GrayText = Color(0xFF64748B)
-val BgInput = Color(0xFFF8FAFC)
-val BorderGray = Color(0xFFE2E8F0)
+import com.Kelompok4.semart.ui.theme.*
 
 @Composable
-fun LoginScreen(onLoginSuccess: () -> Unit) {
+fun LoginScreen(
+    onLoginSuccess: () -> Unit, // Mengembalikan callback asli bawaan NavGraph kamu
+    viewModel: AuthViewModel = viewModel()
+) {
+    val context = LocalContext.current
+    val loginState = viewModel.loginState.value
+
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    // SeMart
+    // 🔥 Memantau status login dari Laravel
+    LaunchedEffect(loginState) {
+        when (loginState) {
+            is LoginState.Success -> {
+                Toast.makeText(context, loginState.message, Toast.LENGTH_SHORT).show()
+                // Memicu navigasi pindah halaman yang diatur di NavGraph
+                onLoginSuccess()
+                viewModel.resetState()
+            }
+            is LoginState.Error -> {
+                Toast.makeText(context, loginState.errorMessage, Toast.LENGTH_LONG).show()
+                viewModel.resetState()
+            }
+            else -> {}
+        }
+    }
+
+    // SeMart Title
     val semartTitleAnnotated = buildAnnotatedString {
         append("Login ke Se")
         withStyle(style = SpanStyle(color = PrimaryBlue)) {
@@ -232,16 +252,17 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                         modifier = Modifier
                             .align(Alignment.End)
                             .padding(top = 6.dp, bottom = 16.dp)
-                            .clickable { /* Handle Lupa Password */ }
+                            .clickable {
+                                Toast.makeText(context, "Simulasi: Fitur reset password akan dikirim ke email SSO Anda.", Toast.LENGTH_LONG).show()
+                            }
                     )
 
-                    // Tombol Login
+                    // Tombol Login (Adaptif Loading)
                     Button(
                         onClick = {
-                            // Nanti di sini tempat pasang validasi API,
-                            // sementara ini kita langsung trigger sukses agar pindah halaman
-                            onLoginSuccess()
+                            viewModel.login(email, password)
                         },
+                        enabled = loginState !is LoginState.Loading,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(46.dp)
@@ -254,7 +275,15 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
                         contentPadding = PaddingValues()
                     ) {
-                        Text(text = "Login", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                        if (loginState is LoginState.Loading) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(22.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(text = "Login", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
@@ -272,7 +301,9 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = PrimaryBlue,
-                            modifier = Modifier.clickable { /* Handle kontak admin */ }
+                            modifier = Modifier.clickable {
+                                Toast.makeText(context, "Simulasi: Membuka WhatsApp Admin SeMart (+62 812-3456-7890)", Toast.LENGTH_LONG).show()
+                            }
                         )
                     }
                 }

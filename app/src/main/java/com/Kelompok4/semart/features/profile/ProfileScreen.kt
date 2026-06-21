@@ -21,39 +21,15 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-// ── DATA CLASS & SEEDER ──
-data class UserProfile(
-    val name: String,
-    val email: String,
-    val transactionCount: Int,
-    val status: String,
-    val phoneNumber: String,
-    val joinedDate: String
-)
-
-val DummyUserProfile = UserProfile(
-    name = "Andi Pratama",
-    email = "andi.pratama@student.uns.ac.id",
-    transactionCount = 156,
-    status = "Aktif",
-    phoneNumber = "081234567890",
-    joinedDate = "12 Jan 2024"
-)
-
-// Konstanta Warna SeMart
-val PrimaryBlue = Color(0xFF3B9DF8)
-val DarkText = Color(0xFF243447)
-val GrayText = Color(0xFF6B7280)
-val BorderGray = Color(0xFFE5E7EB)
-val SoftBlueBg = Color(0xFFF3F9FF)
-val DangerRed = Color(0xFFEF4444)
-val SoftRedBg = Color(0xFFFFF1F1)
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.Kelompok4.semart.ui.theme.*
+import com.Kelompok4.semart.features.profile.ProfileViewModel
+import com.Kelompok4.semart.features.profile.ProfileState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
-    userProfile: UserProfile = DummyUserProfile,
+    viewModel: ProfileViewModel = viewModel(),
     onBackClick: () -> Unit = {},
     onHomeClick: () -> Unit = {},
     onSearchClick: () -> Unit = {},
@@ -64,8 +40,11 @@ fun ProfileScreen(
     onNotificationClick: () -> Unit = {}
 ) {
     var showLogoutDialog by remember { mutableStateOf(false) }
+    val state by viewModel.state.collectAsState()
 
-    // Logout Confirmation Dialog
+    LaunchedEffect(Unit) {
+        viewModel.loadProfile()
+    }
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
@@ -188,122 +167,140 @@ fun ProfileScreen(
                 .verticalScroll(rememberScrollState())
         ) {
 
-            // ── HERO CARD: Avatar + Nama + Email ──
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp, bottom = 20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Avatar circle yang rapi dan bersih
-                Box(
-                    modifier = Modifier
-                        .size(84.dp)
-                        .clip(CircleShape)
-                        .background(SoftBlueBg),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Person,
-                        contentDescription = "Avatar",
-                        tint = PrimaryBlue,
-                        modifier = Modifier.size(42.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                Text(
-                    text = userProfile.name,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = DarkText
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = userProfile.email,
-                    fontSize = 13.sp,
-                    color = GrayText
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Transaksi Selesai badge
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(SoftBlueBg)
-                        .border(1.dp, PrimaryBlue.copy(alpha = 0.2f), RoundedCornerShape(20.dp))
-                        .padding(horizontal = 14.dp, vertical = 6.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Filled.CheckCircle,
-                            contentDescription = null,
-                            tint = PrimaryBlue,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "${userProfile.transactionCount} Transaksi Selesai",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = PrimaryBlue
-                        )
+            when (state) {
+                is ProfileState.Loading -> {
+                    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = PrimaryBlue)
                     }
                 }
-            }
+                is ProfileState.Error -> {
+                    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                        Text((state as ProfileState.Error).message, color = Color.Red)
+                    }
+                }
+                is ProfileState.Success -> {
+                    val profile = (state as ProfileState.Success).profile
+                    val transactionCount = (state as ProfileState.Success).transactionCount
+                    // ── HERO CARD: Avatar + Nama + Email ──
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp, bottom = 20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        // Avatar circle yang rapi dan bersih
+                        Box(
+                            modifier = Modifier
+                                .size(84.dp)
+                                .clip(CircleShape)
+                                .background(SoftBlueBg),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Person,
+                                contentDescription = "Avatar",
+                                tint = PrimaryBlue,
+                                modifier = Modifier.size(42.dp)
+                            )
+                        }
 
-            Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
 
-            // ── SECTION: Informasi Akun ──
-            ProfileSectionCard {
-                Text(
-                    text = "Informasi Akun",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = GrayText,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-                )
+                        Text(
+                            text = profile.name,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DarkText
+                        )
 
-                HorizontalDivider(color = BorderGray, thickness = 1.dp)
+                        Spacer(modifier = Modifier.height(4.dp))
 
-                ProfileInfoRow(
-                    icon = Icons.Outlined.Shield,
-                    label = "Status",
-                    trailingContent = {
+                        Text(
+                            text = profile.email,
+                            fontSize = 13.sp,
+                            color = GrayText
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Transaksi Selesai badge
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(20.dp))
-                                .background(if (userProfile.status == "Aktif") Color(0xFFE8F8F0) else SoftRedBg)
-                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                                .background(SoftBlueBg)
+                                .border(1.dp, PrimaryBlue.copy(alpha = 0.2f), RoundedCornerShape(20.dp))
+                                .padding(horizontal = 14.dp, vertical = 6.dp)
                         ) {
-                            Text(
-                                text = userProfile.status,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (userProfile.status == "Aktif") Color(0xFF16A34A) else DangerRed
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Filled.CheckCircle,
+                                    contentDescription = null,
+                                    tint = PrimaryBlue,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "$transactionCount Transaksi Selesai",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = PrimaryBlue
+                                )
+                            }
                         }
-                    },
-                    showDivider = true
-                )
+                    }
 
-                ProfileInfoRow(
-                    icon = Icons.Outlined.Phone,
-                    label = "No. HP",
-                    value = userProfile.phoneNumber,
-                    showDivider = true
-                )
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                ProfileInfoRow(
-                    icon = Icons.Outlined.CalendarToday,
-                    label = "Bergabung",
-                    value = userProfile.joinedDate,
-                    showDivider = false
-                )
+                    // ── SECTION: Informasi Akun ──
+                    ProfileSectionCard {
+                        Text(
+                            text = "Informasi Akun",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = GrayText,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                        )
+
+                        HorizontalDivider(color = BorderGray, thickness = 1.dp)
+
+                        val status = (profile.status ?: "aktif").lowercase().replaceFirstChar { it.uppercase() }
+                        ProfileInfoRow(
+                            icon = Icons.Outlined.Shield,
+                            label = "Status",
+                            trailingContent = {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .background(if (status.equals("Aktif", ignoreCase = true)) Color(0xFFE8F8F0) else SoftRedBg)
+                                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = status,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (status.equals("Aktif", ignoreCase = true)) Color(0xFF16A34A) else DangerRed
+                                    )
+                                }
+                            },
+                            showDivider = true
+                        )
+
+                        ProfileInfoRow(
+                            icon = Icons.Outlined.Phone,
+                            label = "No. HP",
+                            value = profile.phoneNumber ?: "-",
+                            showDivider = true
+                        )
+
+                        ProfileInfoRow(
+                            icon = Icons.Outlined.CalendarToday,
+                            label = "Bergabung",
+                            value = profile.createdAt ?: "-",
+                            showDivider = false
+                        )
+                    }
+                }
+                else -> {}
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -325,7 +322,7 @@ fun ProfileScreen(
                     iconBg = SoftBlueBg,
                     iconTint = PrimaryBlue,
                     title = "Riwayat Transaksi",
-                    subtitle = "Lihat semua transaksi pembelian & penjualan",
+                    subtitle = "Lihat semua transaksi pembelian",
                     onClick = onTransactionHistoryClick,
                     showDivider = true
                 )
