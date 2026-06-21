@@ -8,15 +8,19 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.Kelompok4.semart.features.auth.LoginScreen
 import com.Kelompok4.semart.features.auth.SplashScreen
-import com.Kelompok4.semart.features.home.HomeScreen
-import com.Kelompok4.semart.features.search.SearchScreen
-import com.Kelompok4.semart.features.product.ProductDetailScreen
-import com.Kelompok4.semart.features.chat.ChatListScreen
 import com.Kelompok4.semart.features.chat.ChatDetailScreen
+import com.Kelompok4.semart.features.chat.ChatListScreen
 import com.Kelompok4.semart.features.checkout.CheckoutScreen
-import com.Kelompok4.semart.features.profile.ProfileScreen
-import com.Kelompok4.semart.features.wishlist.WishlistScreen
+import com.Kelompok4.semart.features.home.HomeScreen
 import com.Kelompok4.semart.features.notification.NotificationScreen
+import com.Kelompok4.semart.features.product.ProductDetailScreen
+import com.Kelompok4.semart.features.profile.ProfileScreen
+import com.Kelompok4.semart.features.search.SearchScreen
+import com.Kelompok4.semart.features.transaction.TransactionHistoryScreen
+import com.Kelompok4.semart.features.wishlist.WishlistScreen
+import com.Kelompok4.semart.features.chat.ChatViewModel
+import com.Kelompok4.semart.features.profile.SellerProfileScreen
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun NavGraph() {
@@ -24,124 +28,184 @@ fun NavGraph() {
 
     NavHost(
         navController = navController,
-        startDestination = "splash"
+        startDestination = Screen.Splash.route
     ) {
-        composable(route = "splash") {
+
+        // ── Splash ────────────────────────────────────────────────────────────
+        composable(route = Screen.Splash.route) {
             SplashScreen(navController = navController)
         }
 
-        composable(route = "login") {
-            LoginScreen(onLoginSuccess = {
-                navController.navigate(route = "home") {
-                    popUpTo(route = "login") { inclusive = true }
+        // ── Login ─────────────────────────────────────────────────────────────
+        composable(route = Screen.Login.route) {
+            LoginScreen(
+                onLoginSuccess = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Login.route) { inclusive = true }
+                    }
                 }
-            })
+            )
         }
 
-        composable(route = "home") {
+        // ── Home ──────────────────────────────────────────────────────────────
+        composable(route = Screen.Home.route) {
             HomeScreen(
-                onSearchClick = { navController.navigate("search") },
-                onProductClick = { id -> navController.navigate("detail/$id") },
-                onChatClick = { navController.navigate("chat") },
-                onProfileClick = { navController.navigate("profile") },
-                onWishlistClick = { navController.navigate("wishlist") },
-                onNotificationClick = { navController.navigate("notification") }
+                onSearchClick      = { navController.navigate(Screen.Search.route) },
+                onProductClick     = { id -> navController.navigate(Screen.productDetail(id)) },
+                onChatClick        = { navController.navigate(Screen.ChatList.route) },
+                onProfileClick     = { navController.navigate(Screen.Profile.route) },
+                onWishlistClick    = { navController.navigate(Screen.Wishlist.route) },
+                onNotificationClick = { navController.navigate(Screen.Notification.route) }
             )
         }
 
-        composable(route = "search") {
+        // ── Search ────────────────────────────────────────────────────────────
+        composable(route = Screen.Search.route) {
             SearchScreen(
-                onBackClick = { navController.popBackStack() },
-                onProductClick = { id -> navController.navigate("detail/$id") },
-                onChatClick = { navController.navigate("chat") },
-                onProfileClick = { navController.navigate("profile") }
+                onBackClick    = { navController.popBackStack() },
+                onHomeClick    = { 
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Home.route)
+                        launchSingleTop = true
+                    }
+                },
+                onProductClick = { id -> navController.navigate(Screen.productDetail(id)) },
+                onChatClick    = { navController.navigate(Screen.ChatList.route) },
+                onProfileClick = { navController.navigate(Screen.Profile.route) }
             )
         }
 
-        composable(route = "chat") {
-            ChatListScreen(
-                onBackToHome = { navController.navigate("home") { popUpTo("home") { inclusive = true } } },
-                onSearchClick = { navController.navigate("search") },
-                onChatDetailClick = { id -> navController.navigate("chat_detail/$id") },
-                onProfileClick = { navController.navigate("profile") }
-            )
-        }
-
-        composable("checkout") {
-            CheckoutScreen(onBackClick = { navController.popBackStack() })
-        }
-
+        // ── Product Detail ────────────────────────────────────────────────────
         composable(
-            route = "detail/{productId}",
+            route = Screen.ProductDetail.route,
             arguments = listOf(navArgument("productId") { type = NavType.IntType })
         ) { backStackEntry ->
             val productId = backStackEntry.arguments?.getInt("productId") ?: 0
+            val chatViewModel: ChatViewModel = viewModel()
             ProductDetailScreen(
-                productId = productId,
+                productId  = productId,
+                onBackClick = { navController.popBackStack() },
+                onChatClick = { sellerId, productIdArg ->
+                    chatViewModel.createChat(sellerId, productIdArg) { chatId ->
+                        navController.navigate(Screen.chatDetail(chatId))
+                    }
+                },
+                onSellerClick = { sellerId ->
+                    navController.navigate(Screen.sellerProfile(sellerId))
+                }
+            )
+        }
+
+        // ── Chat List ─────────────────────────────────────────────────────────
+        composable(route = Screen.ChatList.route) {
+            ChatListScreen(
+                onBackToHome     = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Home.route)
+                        launchSingleTop = true
+                    }
+                },
+                onSearchClick    = { navController.navigate(Screen.Search.route) },
+                onChatDetailClick = { id -> navController.navigate(Screen.chatDetail(id)) },
+                onProfileClick   = { navController.navigate(Screen.Profile.route) }
+            )
+        }
+
+        // ── Chat Detail ───────────────────────────────────────────────────────
+        composable(
+            route = Screen.ChatDetail.route,
+            arguments = listOf(navArgument("chatId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val chatId = backStackEntry.arguments?.getInt("chatId") ?: 0
+            ChatDetailScreen(
+                chatId     = chatId,
+                onBackClick = { navController.popBackStack() },
+                onNavigateToCheckout = { token ->
+                    navController.navigate(Screen.checkout(token))
+                }
+            )
+        }
+
+        // ── Checkout ──────────────────────────────────────────────────────────
+        composable(
+            route = Screen.Checkout.route,
+            arguments = listOf(navArgument("token") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val token = backStackEntry.arguments?.getString("token") ?: ""
+            CheckoutScreen(
+                token      = token,
+                onBackClick = { navController.popBackStack() },
+                onCheckoutSuccess = {
+                    navController.navigate(Screen.History.route) {
+                        popUpTo(Screen.Home.route)
+                    }
+                }
+            )
+        }
+
+        // ── Wishlist ──────────────────────────────────────────────────────────
+        composable(route = Screen.Wishlist.route) {
+            WishlistScreen(
+                onBackClick    = { navController.popBackStack() },
+                onSearchClick  = { navController.navigate(Screen.Search.route) },
+                onProductClick = { id -> navController.navigate(Screen.productDetail(id)) }
+            )
+        }
+
+        // ── Notification ──────────────────────────────────────────────────────
+        composable(route = Screen.Notification.route) {
+            NotificationScreen(
                 onBackClick = { navController.popBackStack() }
             )
         }
 
-        composable("chat_detail/{chatId}") { backStackEntry ->
-            val id = backStackEntry.arguments?.getString("chatId")
-            ChatDetailScreen(
-                onBackClick = { navController.popBackStack() },
-                onNavigateToCheckout = { navController.navigate("checkout") }
+        // ── Transaction History ───────────────────────────────────────────────
+        composable(route = Screen.History.route) {
+            TransactionHistoryScreen(
+                onBackClick = { navController.popBackStack() }
             )
         }
 
-        composable(route = "profile") {
+        // ── Profile ───────────────────────────────────────────────────────────
+        composable(route = Screen.Profile.route) {
             ProfileScreen(
-                onBackClick = { navController.popBackStack() },
-                onHomeClick = {
-                    navController.navigate("home") {
-                        popUpTo("home")
+                onBackClick  = { navController.popBackStack() },
+                onHomeClick  = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Home.route)
                         launchSingleTop = true
                     }
                 },
                 onSearchClick = {
-                    navController.navigate("search") {
+                    navController.navigate(Screen.Search.route) {
                         launchSingleTop = true
                     }
                 },
-                onChatClick = {
-                    navController.navigate("chat") {
+                onChatClick  = {
+                    navController.navigate(Screen.ChatList.route) {
                         launchSingleTop = true
                     }
                 },
-
-                onWishlistClick = { navController.navigate("wishlist") },
-                onNotificationClick = { navController.navigate("notification") }
+                onWishlistClick          = { navController.navigate(Screen.Wishlist.route) },
+                onNotificationClick      = { navController.navigate(Screen.Notification.route) },
+                onTransactionHistoryClick = { navController.navigate(Screen.History.route) },
+                onLogoutClick = {
+                    com.Kelompok4.semart.data.remote.SessionManager.clearSession()
+                    navController.navigate(Screen.Splash.route) {
+                        popUpTo(0) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
             )
         }
 
-        composable("wishlist") {
-            WishlistScreen(
-                onBackClick = { navController.popBackStack() },
-                onHomeClick = {
-                    navController.navigate("home") {
-                        popUpTo("home") { inclusive = true }
-                        launchSingleTop = true
-                    }
-                },
-                onSearchClick = { navController.navigate("search") },
-                onChatClick = { navController.navigate("chat") },
-                onProductClick = { id -> navController.navigate("detail/$id") }
-            )
-        }
-
-        composable("notification") {
-            NotificationScreen(
-                onBackClick = { navController.popBackStack() },
-                onHomeClick = {
-                    navController.navigate("home") {
-                        popUpTo("home") { inclusive = true }
-                        launchSingleTop = true
-                    }
-                },
-                onSearchClick = { navController.navigate("search") },
-                onChatClick = { navController.navigate("chat") }
-            )
+        // ── Seller Profile ────────────────────────────────────────────────────
+        composable(
+            route = Screen.SellerProfile.route,
+            arguments = listOf(navArgument("sellerId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val sellerId = backStackEntry.arguments?.getInt("sellerId") ?: 0
+            SellerProfileScreen(sellerId = sellerId, onBackClick = { navController.popBackStack() })
         }
     }
 }

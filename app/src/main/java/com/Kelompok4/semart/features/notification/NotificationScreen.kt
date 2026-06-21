@@ -21,18 +21,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-// Konstanta Warna SeMart
-val PrimaryBlue = Color(0xFF3B9DF8)
-val DarkText = Color(0xFF243447)
-val GrayText = Color(0xFF6B7280)
-val BorderGray = Color(0xFFE5E7EB)
-val SoftBlueBg = Color(0xFFF3F9FF)
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.Kelompok4.semart.ui.theme.*
+import com.Kelompok4.semart.features.notification.NotificationViewModel
+import com.Kelompok4.semart.features.notification.NotificationState
 
 // ── Data model ──
-data class NotificationItem(
+data class NotificationItemUI(
     val id: Int,
-    val type: NotificationType,
+    val type: NotificationTypeUI,
     val title: String,
     val body: String,
     val actionHint: String,
@@ -40,71 +37,51 @@ data class NotificationItem(
     val isRead: Boolean
 )
 
-enum class NotificationType {
+enum class NotificationTypeUI {
     WISHLIST, MESSAGE, PAYMENT, SYSTEM
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationScreen(
-    onBackClick: () -> Unit = {},
-    onHomeClick: () -> Unit = {},
-    onSearchClick: () -> Unit = {},
-    onChatClick: () -> Unit = {}
+    viewModel: NotificationViewModel = viewModel(),
+    onBackClick: () -> Unit = {}
 ) {
-    // Seed data
-    val initialNotifications = remember {
-        listOf(
-            NotificationItem(
-                id = 1,
-                type = NotificationType.WISHLIST,
-                title = "Pemberitahuan Stok Wishlist",
-                body = "Produk \"Jaket Denim Pria\" yang ada di wishlist kamu telah terjual.",
-                actionHint = "Lihat produk serupa dari seller lain",
-                time = "5 menit lalu",
-                isRead = false
-            ),
-            NotificationItem(
-                id = 2,
-                type = NotificationType.MESSAGE,
-                title = "Pesan dari Andi",
-                body = "Andi telah membalas pesanmu terkait \"Jaket Denim Pria\".",
-                actionHint = "Buka ruang obrolan sekarang",
-                time = "20 menit lalu",
-                isRead = false
-            ),
-            NotificationItem(
-                id = 3,
-                type = NotificationType.PAYMENT,
-                title = "Pembayaran Berhasil",
-                body = "Pembayaranmu untuk \"Jaket Denim Pria\" telah berhasil diverifikasi.",
-                actionHint = "Tunggu seller mengirimkan barang",
-                time = "1 jam lalu",
-                isRead = false
-            ),
-            NotificationItem(
-                id = 4,
-                type = NotificationType.SYSTEM,
-                title = "Selamat Datang di SeMart!",
-                body = "Akun kamu sudah aktif. Mulai jual-beli barang kebutuhan kuliah sekarang.",
-                actionHint = "Jelajahi produk pilihan untukmu",
-                time = "12 Jan 2024",
-                isRead = true
-            ),
-            NotificationItem(
-                id = 5,
-                type = NotificationType.PAYMENT,
-                title = "Transaksi Selesai",
-                body = "Transaksi pembelian \"Buku Analisis Algoritma\" telah berhasil diselesaikan.",
-                actionHint = "Berikan ulasan untuk penjual",
-                time = "10 Jan 2024",
-                isRead = true
-            )
-        )
+    val state by viewModel.state.collectAsState()
+    val unreadCount by viewModel.unreadCount.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadNotifications()
+        viewModel.fetchUnreadCount()
     }
 
-    var notifications by remember { mutableStateOf(initialNotifications) }
-    val unreadCount = notifications.count { !it.isRead }
+    val notifications = remember(state) {
+        if (state is NotificationState.Success) {
+            (state as NotificationState.Success).notifications.map { notif ->
+                val typeUI = when (notif.type) {
+                    "wishlist" -> NotificationTypeUI.WISHLIST
+                    "chat" -> NotificationTypeUI.MESSAGE
+                    "transaction" -> NotificationTypeUI.PAYMENT
+                    else -> NotificationTypeUI.SYSTEM
+                }
+                val actionHint = when (notif.type) {
+                    "wishlist" -> "Lihat produk serupa dari seller lain"
+                    "chat" -> "Buka ruang obrolan sekarang"
+                    "transaction" -> "Cek status transaksi"
+                    else -> "Jelajahi SeMart"
+                }
+                NotificationItemUI(
+                    id = notif.id,
+                    type = typeUI,
+                    title = notif.title,
+                    body = notif.message,
+                    actionHint = actionHint,
+                    time = notif.time,
+                    isRead = !notif.isUnread
+                )
+            }
+        } else emptyList()
+    }
 
     Scaffold(
         containerColor = Color.White,
@@ -122,7 +99,7 @@ fun NotificationScreen(
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Panah kembali minimalis hitam
+                    // Panah kembali
                     IconButton(
                         onClick = onBackClick,
                         modifier = Modifier.size(24.dp)
@@ -137,7 +114,6 @@ fun NotificationScreen(
 
                     Spacer(modifier = Modifier.width(16.dp))
 
-                    // Judul & Subjudul digabung di satu Column agar jaraknya rapat dan presisi
                     Column {
                         Text(
                             text = "Notifikasi",
@@ -146,7 +122,7 @@ fun NotificationScreen(
                             color = DarkText
                         )
 
-                        Spacer(modifier = Modifier.height(2.dp)) // Kontrol jarak rapat antara judul & subjudul
+                        Spacer(modifier = Modifier.height(2.dp))
 
                         Text(
                             text = if (unreadCount > 0) "$unreadCount belum dibaca" else "Semua sudah dibaca",
@@ -157,41 +133,30 @@ fun NotificationScreen(
                     }
                 }
             }
-        },
-        bottomBar = {
-            Surface(
-                color = Color.White,
-                shadowElevation = 8.dp,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, BorderGray, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(72.dp)
-                        .padding(horizontal = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceAround,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        NotifNavItem(selected = false, icon = Icons.Filled.Home, label = "Beranda", onClick = onHomeClick)
-                    }
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        NotifNavItem(selected = false, icon = Icons.Filled.Search, label = "Cari", onClick = onSearchClick)
-                    }
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        NotifNavItem(selected = false, icon = Icons.Filled.Chat, label = "Chat", onClick = onChatClick)
-                    }
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        NotifNavItem(selected = true, icon = Icons.Filled.Notifications, label = "Notifikasi")
-                    }
-                }
-            }
         }
     ) { innerPadding ->
 
-        if (notifications.isEmpty()) {
+        if (state is NotificationState.Loading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.White)
+                    .padding(innerPadding),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = PrimaryBlue)
+            }
+        } else if (state is NotificationState.Error) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.White)
+                    .padding(innerPadding),
+                contentAlignment = Alignment.Center
+            ) {
+                Text((state as NotificationState.Error).message, color = Color.Red)
+            }
+        } else if (notifications.isEmpty()) {
             // Empty state
             Box(
                 modifier = Modifier
@@ -247,9 +212,6 @@ fun NotificationScreen(
                         NotificationCard(
                             notification = notif,
                             onClick = {
-                                notifications = notifications.map {
-                                    if (it.id == notif.id) it.copy(isRead = true) else it
-                                }
                             }
                         )
                     }
@@ -282,14 +244,14 @@ fun NotificationScreen(
 // ── REUSABLE: Notification Card ──
 @Composable
 fun NotificationCard(
-    notification: NotificationItem,
+    notification: NotificationItemUI,
     onClick: () -> Unit
 ) {
     val icon = when (notification.type) {
-        NotificationType.WISHLIST -> Icons.Outlined.Bookmark
-        NotificationType.MESSAGE -> Icons.Outlined.MailOutline
-        NotificationType.PAYMENT -> Icons.Outlined.Payments
-        NotificationType.SYSTEM -> Icons.Outlined.Info
+        NotificationTypeUI.WISHLIST -> Icons.Outlined.Bookmark
+        NotificationTypeUI.MESSAGE -> Icons.Outlined.MailOutline
+        NotificationTypeUI.PAYMENT -> Icons.Outlined.Payments
+        NotificationTypeUI.SYSTEM -> Icons.Outlined.Info
     }
 
     Card(
@@ -391,42 +353,6 @@ fun NotificationCard(
                     )
                 }
             }
-        }
-    }
-}
-
-// ── REUSABLE: Nav Item ──
-@Composable
-fun NotifNavItem(
-    selected: Boolean,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    onClick: () -> Unit = {}
-) {
-    Box(
-        modifier = Modifier
-            .size(height = 64.dp, width = 62.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = if (selected) PrimaryBlue else Color(0xFFA1ACB8),
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = label,
-                fontSize = 10.sp,
-                color = if (selected) PrimaryBlue else GrayText,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium
-            )
         }
     }
 }

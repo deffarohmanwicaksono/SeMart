@@ -9,9 +9,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
@@ -30,494 +31,506 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.Kelompok4.semart.R
-
-// Konstanta Warna SeMart
-val PrimaryBlue = Color(0xFF3B9DF8)
-val DarkText = Color(0xFF243447)
-val GrayText = Color(0xFF6B7280)
-val BorderGray = Color(0xFFE5E7EB)
-val SoftBlueBg = Color(0xFFF3F9FF)
-
+import com.Kelompok4.semart.features.product.ProductViewModel
+import com.Kelompok4.semart.features.product.ProductDetailState
+import com.Kelompok4.semart.ui.theme.*
+import com.Kelompok4.semart.features.wishlist.WishlistViewModel
+import com.Kelompok4.semart.data.remote.SessionManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductDetailScreen(
-    productId: Int,
+    viewModel: ProductViewModel = viewModel(),
+    wishlistViewModel: WishlistViewModel = viewModel(),
+    productId: Int = 0,
     onBackClick: () -> Unit = {},
-    onChatClick: () -> Unit = {}
+    onChatClick: (sellerId: Int, productId: Int) -> Unit = { _, _ -> },
+    onSellerClick: (sellerId: Int) -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
     var isFavorite by remember { mutableStateOf(false) }
     var showReportModal by remember { mutableStateOf(false) }
     var showFullDesc by remember { mutableStateOf(false) }
 
-    // Data mockup
-    val title = "Laptop MacBook Air M1 2020"
-    val price = "Rp 7.500.000"
-    val condition = "Bekas Seperti Baru"
-    val brand = "Apple"
-    val year = "2021"
-    val shortDesc = "MacBook Air M1 2020, performa masih kencang untuk kebutuhan kuliah, browsing, desain ringan, dan editing. Baterai awet, tidak pernah servis, semua fungsi normal."
-    val fullDesc = """MacBook Air M1 2020 (Space Gray)
-Laptop andalan dengan performa chip M1 yang masih sangat kencang untuk kebutuhan kuliah, browsing, desain grafis ringan, hingga editing video/foto.
+    val state by viewModel.state.collectAsState()
 
-Spesifikasi Singkat:
-• RAM: 8GB Unified Memory
-• SSD: 256GB (Super cepat)
-• Layar: Retina Display 13.3 inci
-• Baterai: Health di atas 90%
-
-Kondisi:
-• Body mulus 98%, tidak ada dent atau goresan berarti
-• Layar bersih, tidak ada dead pixel
-• Semua fitur berjalan normal
-• Kelengkapan: Unit MacBook + Charger original
-
-Alasan Dijual:
-Upgrade ke seri Pro karena kebutuhan project yang lebih berat."""
-
-    Scaffold(
-        containerColor = Color(0xFFF8FAFC),
-        topBar = {
-            TopAppBar(
-                title = {},
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.Filled.ArrowBack,
-                            contentDescription = "Kembali",
-                            tint = DarkText
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White),
-                modifier = Modifier.border(
-                    width = 1.dp,
-                    color = Color(0xFFE2E8F0),
-                    shape = RoundedCornerShape(0.dp)
-                )
-            )
-        },
-        bottomBar = {
-            Surface(
-                color = Color.White,
-                shadowElevation = 8.dp,
-                modifier = Modifier.navigationBarsPadding()
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                ) {
-                    // Tombol Chat
-                    Button(
-                        onClick = onChatClick,
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Chat,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Chat dengan Seller",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        // Wishlist
-                        OutlinedButton(
-                            onClick = { isFavorite = !isFavorite },
-                            border = androidx.compose.foundation.BorderStroke(
-                                1.5.dp,
-                                if (isFavorite) PrimaryBlue else PrimaryBlue
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = if (isFavorite) SoftBlueBg else Color.White
-                            ),
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(46.dp)
-                        ) {
-                            Icon(
-                                imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                                contentDescription = null,
-                                tint = if (isFavorite) PrimaryBlue else PrimaryBlue,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = if (isFavorite) "Tersimpan" else "Simpan",
-                                color = if (isFavorite) PrimaryBlue else PrimaryBlue,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-
-                        // Laporkan
-                        OutlinedButton(
-                            onClick = { showReportModal = true },
-                            border = androidx.compose.foundation.BorderStroke(1.5.dp, PrimaryBlue),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White),
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(46.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Flag,
-                                contentDescription = null,
-                                tint = PrimaryBlue,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Laporkan",
-                                color = PrimaryBlue,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(scrollState)
-        ) {
-            // ── IMAGE SECTION ──
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(280.dp)
-                    .background(Color.White),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.login_illustration),
-                    contentDescription = "Foto Produk",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    contentScale = ContentScale.Fit
-                )
-
-                // Dot indicator
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(5.dp)
-                ) {
-                    repeat(5) { index ->
-                        Box(
-                            modifier = Modifier
-                                .size(if (index == 0) 8.dp else 6.dp)
-                                .clip(CircleShape)
-                                .background(if (index == 0) PrimaryBlue else Color(0xFFCBD5E1))
-                        )
-                    }
-                }
-            }
-
-            Divider(color = Color(0xFFE2E8F0), thickness = 1.dp)
-
-            // ── INFO UTAMA ──
-            Column(
-                modifier = Modifier
-                    .background(Color.White)
-                    .padding(horizontal = 16.dp, vertical = 16.dp)
-            ) {
-                // Kategori
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(SoftBlueBg)
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = "Elektronik",
-                        color = PrimaryBlue,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Judul
-                Text(
-                    text = title,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = DarkText,
-                    lineHeight = 26.sp
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                // Harga
-                Text(
-                    text = price,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Black,
-                    color = PrimaryBlue
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Kondisi pill
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(SoftBlueBg)
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = condition,
-                        color = PrimaryBlue,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // ── SPEC GRID ──
-            Surface(
-                color = Color.White,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    SpecItem(
-                        icon = { Icon(Icons.Filled.Info, null, tint = PrimaryBlue, modifier = Modifier.size(18.dp)) },
-                        label = "Kondisi",
-                        value = "Bekas Baik",
-                        modifier = Modifier.weight(1f)
-                    )
-                    Box(modifier = Modifier.width(1.dp).height(32.dp).background(Color(0xFFE2E8F0)))
-                    SpecItem(
-                        icon = { Icon(Icons.Filled.Star, null, tint = PrimaryBlue, modifier = Modifier.size(18.dp)) },
-                        label = "Merek",
-                        value = brand,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Box(modifier = Modifier.width(1.dp).height(32.dp).background(Color(0xFFE2E8F0)))
-                    SpecItem(
-                        icon = { Icon(Icons.Filled.CalendarMonth, null, tint = PrimaryBlue, modifier = Modifier.size(18.dp)) },
-                        label = "Tahun",
-                        value = year,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // ── DESKRIPSI ──
-            Surface(
-                color = Color.White,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {
-                    Text(
-                        text = "Deskripsi",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = DarkText
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        text = if (showFullDesc) fullDesc else shortDesc,
-                        fontSize = 13.sp,
-                        color = DarkText,
-                        lineHeight = 20.sp
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.clickable { showFullDesc = !showFullDesc }
-                    ) {
-                        Text(
-                            text = if (showFullDesc) "Tampilkan lebih sedikit" else "Lihat selengkapnya",
-                            color = PrimaryBlue,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Icon(
-                            imageVector = Icons.Outlined.ChevronRight,
-                            contentDescription = null,
-                            tint = PrimaryBlue,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // ── SELLER CARD ──
-            Surface(
-                color = Color.White,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {
-                    Text(
-                        text = "Dijual oleh",
-                        fontSize = 12.sp,
-                        color = GrayText,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(12.dp))
-                            .clickable { }
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Avatar
-                        Box(
-                            modifier = Modifier
-                                .size(46.dp)
-                                .clip(CircleShape)
-                                .background(SoftBlueBg),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "AP",
-                                fontWeight = FontWeight.Bold,
-                                color = PrimaryBlue,
-                                fontSize = 15.sp
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(12.dp))
-
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "Andi Pratama",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = DarkText
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Icon(
-                                    imageVector = Icons.Filled.Star,
-                                    contentDescription = "Terverifikasi",
-                                    tint = PrimaryBlue,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(3.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "4.9",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = DarkText
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                repeat(5) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Star,
-                                        contentDescription = null,
-                                        tint = Color(0xFFFBBF24),
-                                        modifier = Modifier.size(11.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "(128 ulasan)",
-                                    fontSize = 11.sp,
-                                    color = GrayText
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(3.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Filled.LocationOn,
-                                    contentDescription = null,
-                                    tint = GrayText,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Spacer(modifier = Modifier.width(3.dp))
-                                Text(
-                                    text = "Kampus UNS",
-                                    fontSize = 11.sp,
-                                    color = GrayText
-                                )
-                            }
-                        }
-
-                        Text(
-                            text = "Lihat Profil",
-                            fontSize = 12.sp,
-                            color = PrimaryBlue,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(modifier = Modifier.width(2.dp))
-                        Icon(
-                            imageVector = Icons.Outlined.ChevronRight,
-                            contentDescription = null,
-                            tint = PrimaryBlue,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-        }
+    LaunchedEffect(productId) {
+        viewModel.loadProductDetail(productId)
     }
 
-    // ── REPORT MODAL ──
-    if (showReportModal) {
-        ReportProductModal(
-            productName = title,
-            productPrice = price,
-            sellerName = "Andi Pratama",
-            reporterName = "Syifa Qurrota",
-            onDismiss = { showReportModal = false },
-            onSubmit = { reason ->
-                // TODO: kirim laporan ke backend
-                showReportModal = false
+    when (val currentState = state) {
+        is ProductDetailState.Loading -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = PrimaryBlue)
             }
-        )
+        }
+        is ProductDetailState.Error -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(currentState.message, color = Color.Red)
+            }
+        }
+        is ProductDetailState.Success -> {
+            val product = currentState.product
+
+            LaunchedEffect(product.id) {
+                isFavorite = product.isWishlisted
+            }
+
+            val title = product.name
+            val price = product.priceLabel
+            val condition = product.condition.replace("_", " ").split(" ").joinToString(" ") { it.replaceFirstChar { char -> char.uppercase() } }
+            val brand = product.category ?: "Lainnya"
+            val shortDesc = product.description ?: "Tidak ada deskripsi"
+            val fullDesc = product.description ?: "Tidak ada deskripsi"
+
+            Scaffold(
+                containerColor = Color(0xFFF8FAFC), // Menggunakan abu-abu sangat muda agar card kontras bersih
+                topBar = {
+                    TopAppBar(
+                        title = {},
+                        navigationIcon = {
+                            IconButton(onClick = onBackClick) {
+                                Icon(
+                                    imageVector = Icons.Filled.ArrowBack,
+                                    contentDescription = "Kembali",
+                                    tint = DarkText
+                                )
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White),
+                        modifier = Modifier.border(
+                            width = 1.dp,
+                            color = Color(0xFFE2E8F0),
+                            shape = RoundedCornerShape(0.dp)
+                        )
+                    )
+                },
+                bottomBar = {
+                    Surface(
+                        color = Color.White,
+                        shadowElevation = 8.dp,
+                        modifier = Modifier.navigationBarsPadding()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 14.dp)
+                        ) {
+                            // Tombol Chat (Atas)
+                            Button(
+                                onClick = { onChatClick(product.seller?.id ?: 0, productId) },
+                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Chat,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Chat dengan Seller",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Tombol Simpan & Laporkan (Bawah berjajar)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                // Wishlist
+                                OutlinedButton(
+                                    onClick = {
+                                        isFavorite = !isFavorite
+                                        wishlistViewModel.toggleWishlist(productId)
+                                    },
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.5.dp,
+                                        PrimaryBlue
+                                    ),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        containerColor = if (isFavorite) SoftBlueBg else Color.White
+                                    ),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(46.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                        contentDescription = null,
+                                        tint = PrimaryBlue,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = if (isFavorite) "Tersimpan" else "Simpan",
+                                        color = PrimaryBlue,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+
+                                // Laporkan
+                                OutlinedButton(
+                                    onClick = { showReportModal = true },
+                                    border = androidx.compose.foundation.BorderStroke(1.5.dp, PrimaryBlue),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(46.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Flag,
+                                        contentDescription = null,
+                                        tint = PrimaryBlue,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Laporkan",
+                                        color = PrimaryBlue,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            ) { innerPadding ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .verticalScroll(scrollState)
+                ) {
+                    // ── IMAGE SECTION ──
+                    val pagerState = rememberPagerState(pageCount = { if (product.images.isNotEmpty()) product.images.size else 1 })
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(300.dp)
+                            .background(Color.White),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.fillMaxSize()
+                        ) { page ->
+                            if (product.images.isNotEmpty()) {
+                                AsyncImage(
+                                    model = product.images[page].url,
+                                    contentDescription = "Foto Produk $page",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Image(
+                                    painter = painterResource(id = R.drawable.login_illustration),
+                                    contentDescription = "Foto Produk Default",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Fit
+                                )
+                            }
+                        }
+
+                        if (product.images.size > 1) {
+                            Row(
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(bottom = 14.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                repeat(product.images.size) { index ->
+                                    Box(
+                                        modifier = Modifier
+                                            .size(if (pagerState.currentPage == index) 8.dp else 6.dp)
+                                            .clip(CircleShape)
+                                            .background(if (pagerState.currentPage == index) PrimaryBlue else Color(0xFFCBD5E1))
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // ── INFO UTAMA ──
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color.White)
+                            .padding(horizontal = 20.dp, vertical = 20.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // Judul Produk
+                        Text(
+                            text = title,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DarkText,
+                            lineHeight = 26.sp
+                        )
+
+                        // Harga
+                        Text(
+                            text = price,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Black,
+                            color = PrimaryBlue
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // ── SPEC GRID (Kondisi & Kategori) ──
+                    Surface(
+                        color = Color.White,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(top = 18.dp)) {
+                            Text(
+                                text = "Kondisi & Kategori",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = DarkText,
+                                modifier = Modifier.padding(horizontal = 20.dp)
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                                color = Color.White,
+                                shape = RoundedCornerShape(12.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0))
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    SpecItem(
+                                        icon = { Icon(Icons.Filled.Info, null, tint = PrimaryBlue, modifier = Modifier.size(20.dp)) },
+                                        label = "Kondisi",
+                                        value = condition,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    // Sekat (Divider)
+                                    Box(
+                                        modifier = Modifier
+                                            .width(1.dp)
+                                            .height(36.dp)
+                                            .background(Color(0xFFE2E8F0))
+                                    )
+                                    SpecItem(
+                                        icon = { Icon(Icons.Filled.Star, null, tint = PrimaryBlue, modifier = Modifier.size(20.dp)) },
+                                        label = "Kategori",
+                                        value = brand,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // ── DESKRIPSI ──
+                    Surface(
+                        color = Color.White,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp)) {
+                            Text(
+                                text = "Deskripsi",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = DarkText
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(
+                                text = if (showFullDesc) fullDesc else shortDesc,
+                                fontSize = 13.sp,
+                                color = DarkText,
+                                lineHeight = 22.sp,
+                                maxLines = if (showFullDesc) Int.MAX_VALUE else 3,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.clickable { showFullDesc = !showFullDesc }
+                            ) {
+                                Text(
+                                    text = if (showFullDesc) "Tampilkan lebih sedikit" else "Lihat selengkapnya",
+                                    color = PrimaryBlue,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Icon(
+                                    imageVector = Icons.Outlined.ChevronRight,
+                                    contentDescription = null,
+                                    tint = PrimaryBlue,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // ── SELLER CARD ──
+                    Surface(
+                        color = Color.White,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp)) {
+                            Text(
+                                text = "Dijual oleh",
+                                fontSize = 12.sp,
+                                color = GrayText,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(12.dp))
+                                    .clickable { onSellerClick(product.seller?.id ?: 0) }
+                                    .padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Avatar
+                                Box(
+                                    modifier = Modifier
+                                        .size(46.dp)
+                                        .clip(CircleShape)
+                                        .background(SoftBlueBg),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = product.seller?.name?.take(2)?.uppercase() ?: "SL",
+                                        fontWeight = FontWeight.Bold,
+                                        color = PrimaryBlue,
+                                        fontSize = 15.sp
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(12.dp))
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = product.seller?.name ?: "Seller",
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = DarkText
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Icon(
+                                            imageVector = Icons.Filled.Star,
+                                            contentDescription = "Terverifikasi",
+                                            tint = PrimaryBlue,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = "${product.sellerRating ?: "0.0"}",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = DarkText
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        repeat(5) {
+                                            Icon(
+                                                imageVector = Icons.Filled.Star,
+                                                contentDescription = null,
+                                                tint = Color(0xFFFBBF24),
+                                                modifier = Modifier.size(12.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "(${product.sellerReviewsCount ?: 0} ulasan)",
+                                            fontSize = 11.sp,
+                                            color = GrayText
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Filled.LocationOn,
+                                            contentDescription = null,
+                                            tint = GrayText,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "Kampus UNS",
+                                            fontSize = 11.sp,
+                                            color = GrayText
+                                        )
+                                    }
+                                }
+
+                                Text(
+                                    text = "Lihat Profil",
+                                    fontSize = 12.sp,
+                                    color = PrimaryBlue,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Icon(
+                                    imageVector = Icons.Outlined.ChevronRight,
+                                    contentDescription = null,
+                                    tint = PrimaryBlue,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+                }
+            }
+
+            // ── REPORT MODAL ──
+            if (showReportModal) {
+                ReportProductModal(
+                    productName = title,
+                    productPrice = price,
+                    sellerName = product.seller?.name ?: "Seller",
+                    reporterName = SessionManager.getName() ?: "User",
+                    onDismiss = { showReportModal = false },
+                    onSubmit = { reason ->
+                        viewModel.reportProduct(productId, reason)
+                        showReportModal = false
+                    }
+                )
+            }
+        }
+        else -> {}
     }
 }
 
@@ -532,23 +545,36 @@ fun SpecItem(
     value: String,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally
+    Row(
+        modifier = modifier.padding(horizontal = 14.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        icon()
-        Spacer(modifier = Modifier.height(5.dp))
-        Text(
-            text = value,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-            color = DarkText
-        )
-        Text(
-            text = label,
-            fontSize = 11.sp,
-            color = GrayText
-        )
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(CircleShape)
+                .background(Color(0xFFF1F5F9)),
+            contentAlignment = Alignment.Center
+        ) {
+            icon()
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(
+                text = label,
+                fontSize = 11.sp,
+                color = GrayText,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = value,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = DarkText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
@@ -580,7 +606,6 @@ fun ReportProductModal(
                 .wrapContentHeight()
         ) {
             Column {
-                // ── Header modal ──
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -623,7 +648,6 @@ fun ReportProductModal(
                         .verticalScroll(rememberScrollState())
                         .padding(18.dp)
                 ) {
-                    // ── Kartu Info Produk ──
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -633,15 +657,20 @@ fun ReportProductModal(
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.login_illustration),
-                            contentDescription = "Foto Produk",
+                        Box(
                             modifier = Modifier
-                                .size(56.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(Color.White),
-                            contentScale = ContentScale.Fit
-                        )
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(SoftBlueBg),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = sellerName.take(2).uppercase(),
+                                fontWeight = FontWeight.Bold,
+                                color = PrimaryBlue,
+                                fontSize = 16.sp
+                            )
+                        }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
@@ -670,7 +699,6 @@ fun ReportProductModal(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // ── Kartu Pelapor ──
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -712,7 +740,6 @@ fun ReportProductModal(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // ── Input alasan ──
                     Text(
                         text = "Alasan Laporan",
                         fontSize = 13.sp,
@@ -753,7 +780,6 @@ fun ReportProductModal(
                         maxLines = 6
                     )
 
-                    // Hitung karakter
                     Text(
                         text = "${reason.length} karakter",
                         fontSize = 11.sp,
@@ -765,7 +791,6 @@ fun ReportProductModal(
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // ── Tombol footer ──
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)

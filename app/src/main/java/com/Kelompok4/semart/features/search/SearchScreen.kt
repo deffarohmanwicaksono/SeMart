@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,24 +30,30 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.Kelompok4.semart.R
-import com.Kelompok4.semart.features.chat.BorderGray
+import com.Kelompok4.semart.data.model.Product
+import com.Kelompok4.semart.features.search.SearchViewModel
+import com.Kelompok4.semart.features.search.SearchState
+import com.Kelompok4.semart.ui.theme.*
 
-// Konstanta Warna SeMart
-val PrimaryBlue = Color(0xFF3B9DF8)
-val DarkText = Color(0xFF243447)
-val GrayText = Color(0xFF6B7280)
-val BorderGray = Color(0xFFE5E7EB)
-val SoftBlueBg = Color(0xFFF3F9FF)
+import com.Kelompok4.semart.features.wishlist.WishlistViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
+    viewModel: SearchViewModel = viewModel(),
+    wishlistViewModel: WishlistViewModel = viewModel(),
     onBackClick: () -> Unit = {},
+    onHomeClick: () -> Unit = {},
     onProductClick: (Int) -> Unit = {},
     onChatClick: () -> Unit = {},
     onProfileClick: () -> Unit = {}
 ) {
+    val state by viewModel.state.collectAsState()
+    val scope = rememberCoroutineScope()
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("Semua") }
 
@@ -89,7 +96,12 @@ fun SearchScreen(
                     // SEARCH BAR
                     OutlinedTextField(
                         value = searchQuery,
-                        onValueChange = { searchQuery = it },
+                        onValueChange = { 
+                            searchQuery = it 
+                            if(it.isNotEmpty()) {
+                                viewModel.searchProducts(it, if(selectedCategory == "Semua") null else selectedCategory.lowercase(), if(selectedSort == "Terbaru") null else selectedSort.lowercase())
+                            }
+                        },
                         textStyle = LocalTextStyle.current.copy(fontSize = 13.sp, color = DarkText),
                         placeholder = {
                             Text("Cari barang kos...", fontSize = 13.sp, color = GrayText)
@@ -157,6 +169,9 @@ fun SearchScreen(
                                     onClick = {
                                         selectedSort = option
                                         sortMenuExpanded = false
+                                        if(searchQuery.isNotEmpty()) {
+                                            viewModel.searchProducts(searchQuery, if(selectedCategory == "Semua") null else selectedCategory.lowercase(), if(option == "Terbaru") null else option.lowercase())
+                                        }
                                     }
                                 )
                             }
@@ -182,7 +197,7 @@ fun SearchScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        SearchNavItemManual(selected = false, icon = Icons.Filled.Home, label = "Beranda", onClick = onBackClick)
+                        SearchNavItemManual(selected = false, icon = Icons.Filled.Home, label = "Beranda", onClick = onHomeClick)
                     }
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                         SearchNavItemManual(selected = true, icon = Icons.Filled.Search, label = "Cari")
@@ -208,7 +223,7 @@ fun SearchScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
 
-            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
                 Column {
                     if (searchQuery.isEmpty()) {
                         // TAMPILAN KETIKA PENCARIAN KOSONG
@@ -234,7 +249,10 @@ fun SearchScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable { searchQuery = searchHint }
+                                        .clickable { 
+                                            searchQuery = searchHint 
+                                            viewModel.searchProducts(searchHint, if(selectedCategory == "Semua") null else selectedCategory.lowercase(), if(selectedSort == "Terbaru") null else selectedSort.lowercase())
+                                        }
                                         .padding(vertical = 10.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
@@ -274,7 +292,12 @@ fun SearchScreen(
                                             color = if (isSelected) Color.Transparent else PrimaryBlue,
                                             shape = RoundedCornerShape(20.dp)
                                         )
-                                        .clickable { selectedCategory = category }
+                                        .clickable { 
+                                            selectedCategory = category 
+                                            if(searchQuery.isNotEmpty()) {
+                                                viewModel.searchProducts(searchQuery, if(category == "Semua") null else category.lowercase(), if(selectedSort == "Terbaru") null else selectedSort.lowercase())
+                                            }
+                                        }
                                         .padding(horizontal = 14.dp, vertical = 6.dp)
                                 ) {
                                     Text(
@@ -301,25 +324,49 @@ fun SearchScreen(
 
             // GRID ITEM PRODUK
             if (searchQuery.isNotEmpty()) {
-                items(6) { index ->
-                    var isLiked by remember { mutableStateOf(false) }
-
-                    ProductCardItem(
-                        title = when (index) {
-                            0 -> "Kipas Angin Kos Meja Sekai"
-                            1 -> "Buku Analisis Algoritma UNS"
-                            2 -> "Meja Belajar Lipat Kayu"
-                            else -> "Barang Keperluan Kuliah"
-                        },
-                        price = "Rp 50.000",
-                        itemCondition = "Bekas Layak Pakai",
-                        isLiked = isLiked,
-                        onLikeClick = { isLiked = !isLiked },
-                        modifier = Modifier.clickable { onProductClick(index) }
-                    )
+                when (state) {
+                    is SearchState.Loading -> {
+                        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = PrimaryBlue)
+                            }
+                        }
+                    }
+                    is SearchState.Error -> {
+                        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                                Text((state as SearchState.Error).message, color = Color.Red)
+                            }
+                        }
+                    }
+                    is SearchState.Success -> {
+                        val products = (state as SearchState.Success).products
+                        if (products.isEmpty()) {
+                            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                                Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                                    Text("Produk tidak ditemukan.", color = GrayText)
+                                }
+                            }
+                        } else {
+                            items(products) { product ->
+                                ProductCardItem(
+                                    product = product,
+                                    onLikeClick = {
+                                        scope.launch {
+                                            wishlistViewModel.toggleWishlist(product.id)
+                                            // Panggil ulang pencarian untuk merefresh state
+                                            viewModel.searchProducts(searchQuery, if(selectedCategory == "Semua") null else selectedCategory.lowercase(), if(selectedSort == "Terbaru") null else selectedSort.lowercase())
+                                        }
+                                    },
+                                    modifier = Modifier.clickable { onProductClick(product.id) }
+                                )
+                            }
+                        }
+                    }
+                    else -> {}
                 }
 
-                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             }
@@ -366,10 +413,7 @@ fun SearchNavItemManual(
 // Component Reusable: Product Card
 @Composable
 fun ProductCardItem(
-    title: String,
-    price: String,
-    itemCondition: String,
-    isLiked: Boolean,
+    product: Product,
     onLikeClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -384,31 +428,43 @@ fun ProductCardItem(
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
             Column {
-                Image(
-                    painter = painterResource(id = R.drawable.login_illustration),
-                    contentDescription = "Foto Produk",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(110.dp)
-                        .background(Color(0xFFF8FAFC)),
-                    contentScale = ContentScale.Fit
-                )
+                if (product.images.isNotEmpty()) {
+                    AsyncImage(
+                        model = product.images.first().url,
+                        contentDescription = "Foto Produk",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(110.dp)
+                            .background(Color(0xFFF8FAFC)),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = R.drawable.login_illustration),
+                        contentDescription = "Foto Produk Default",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(110.dp)
+                            .background(Color(0xFFF8FAFC)),
+                        contentScale = ContentScale.Fit
+                    )
+                }
 
-                Column(modifier = Modifier.padding(10.dp)) {
+                Column(modifier = Modifier.padding(12.dp)) {
                     Text(
-                        text = title,
-                        fontSize = 12.sp,
+                        text = product.name,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = DarkText,
-                        maxLines = 2,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         lineHeight = 16.sp
                     )
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
 
                     Text(
-                        text = price,
+                        text = product.priceLabel,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = PrimaryBlue
@@ -420,19 +476,17 @@ fun ProductCardItem(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
                             .background(SoftBlueBg)
-                            .padding(horizontal = 6.dp, vertical = 3.dp)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = itemCondition,
-                            fontSize = 9.sp,
+                            text = product.condition.replace("_", " ").split(" ").joinToString(" ") { it.replaceFirstChar { char -> char.uppercase() } },
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Medium,
                             color = PrimaryBlue,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
-
-                    Spacer(modifier = Modifier.height(6.dp))
                 }
             }
 
@@ -446,7 +500,7 @@ fun ProductCardItem(
                     .padding(6.dp)
             ) {
                 Icon(
-                    imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                    imageVector = if (product.isWishlisted) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                     contentDescription = "Suka",
                     tint = PrimaryBlue,
                     modifier = Modifier.size(16.dp)

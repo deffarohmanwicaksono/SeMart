@@ -25,50 +25,40 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.Kelompok4.semart.R
-
-// Konstanta Warna
-val PrimaryBlue = Color(0xFF3B9DF8)
-val DarkText = Color(0xFF243447)
-val GrayText = Color(0xFF6B7280)
-val BorderGray = Color(0xFFE5E7EB)
-val SoftBlueBg = Color(0xFFF3F9FF)
-
-data class ChatItemData(
-    val id: Int,
-    val senderName: String,
-    val productName: String,
-    val lastMessage: String,
-    val time: String,
-    val unreadCount: Int,
-    val imageResId: Int
-)
+import com.Kelompok4.semart.data.model.Chat
+import com.Kelompok4.semart.features.chat.ChatViewModel
+import com.Kelompok4.semart.features.chat.ChatState
+import com.Kelompok4.semart.ui.theme.*
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatListScreen(
+    viewModel: ChatViewModel = viewModel(),
     onBackToHome: () -> Unit = {},
     onSearchClick: () -> Unit = {},
     onChatDetailClick: (Int) -> Unit = {},
     onProfileClick: () -> Unit = {}
 ) {
+    val state by viewModel.state.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
 
-    val chatList = remember {
-        listOf(
-            ChatItemData(1, "Andi Pratama", "Kipas Angin Meja Sekai", "Apakah barangnya masih ready kak?", "14:30", 1, R.drawable.login_illustration),
-            ChatItemData(2, "Siti Aisyah", "Buku Analisis Algoritma", "Bisa nego tipis gak kak?", "10:15", 0, R.drawable.login_illustration),
-            ChatItemData(3, "Dewi Lestari", "Meja Belajar Lipat", "Lokasi COD-nya di mana ya?", "09:45", 2, R.drawable.login_illustration),
-            ChatItemData(4, "Budi Santoso", "Router Wifi Bekas", "Barangnya masih mulus kak?", "Kemarin", 0, R.drawable.login_illustration)
-        )
+    LaunchedEffect(Unit) {
+        viewModel.loadChatList()
     }
 
-    // Hitung total pesan yang belum dibaca secara dinamis
-    val totalUnread = remember(chatList) { chatList.sumOf { it.unreadCount } }
+    val chatList = if (state is ChatState.ChatListSuccess) {
+        (state as ChatState.ChatListSuccess).chats
+    } else emptyList()
 
     val filteredChatList = chatList.filter {
-        it.senderName.contains(searchQuery, ignoreCase = true) ||
-                it.productName.contains(searchQuery, ignoreCase = true)
+        val targetName = if (it.currentPov == "buyer") it.seller.name else it.buyer.name
+        targetName.contains(searchQuery, ignoreCase = true) ||
+                it.product.name.contains(searchQuery, ignoreCase = true)
     }
 
     Scaffold(
@@ -94,7 +84,7 @@ fun ChatListScreen(
 
                     if (searchQuery.isEmpty()) {
                         Text(
-                            text = "Ada $totalUnread pesan yang belum dibaca",
+                            text = "Menampilkan semua pesan",
                             fontSize = 12.sp,
                             color = PrimaryBlue,
                             fontWeight = FontWeight.Medium,
@@ -247,24 +237,43 @@ fun ChatListScreen(
             }
 
             // Render List Chat secara Dinamis
-            if (filteredChatList.isEmpty()) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 40.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Tidak ada percakapan ditemukan.", color = GrayText, fontSize = 13.sp)
+            when (state) {
+                is ChatState.Loading -> {
+                    item {
+                        Box(modifier = Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = PrimaryBlue)
+                        }
                     }
                 }
-            } else {
-                items(filteredChatList) { chat ->
-                    ChatRowItem(
-                        chatData = chat,
-                        onClick = { onChatDetailClick(chat.id) }
-                    )
+                is ChatState.Error -> {
+                    item {
+                        Box(modifier = Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
+                            Text((state as ChatState.Error).message, color = Color.Red)
+                        }
+                    }
                 }
+                is ChatState.ChatListSuccess -> {
+                    if (filteredChatList.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 40.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("Tidak ada percakapan ditemukan.", color = GrayText, fontSize = 13.sp)
+                            }
+                        }
+                    } else {
+                        items(filteredChatList) { chat ->
+                            ChatRowItem(
+                                chatData = chat,
+                                onClick = { onChatDetailClick(chat.id) }
+                            )
+                        }
+                    }
+                }
+                else -> {}
             }
 
             // Info Card Box
@@ -313,7 +322,7 @@ fun ChatListScreen(
 
 @Composable
 fun ChatRowItem(
-    chatData: ChatItemData,
+    chatData: Chat,
     onClick: () -> Unit
 ) {
     Card(
@@ -331,15 +340,32 @@ fun ChatRowItem(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Image(
-                painter = painterResource(id = chatData.imageResId),
-                contentDescription = "Foto Produk",
-                modifier = Modifier
-                    .size(54.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFFF8FAFC)),
-                contentScale = ContentScale.Fit
-            )
+            if (chatData.product.imageUrl.isNotEmpty()) {
+                AsyncImage(
+                    model = chatData.product.imageUrl,
+                    contentDescription = "Foto Produk",
+                    modifier = Modifier
+                        .size(54.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFF8FAFC)),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(54.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(SoftBlueBg),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Image,
+                        contentDescription = "Foto Produk Default",
+                        tint = PrimaryBlue,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.width(12.dp))
 
@@ -347,14 +373,14 @@ fun ChatRowItem(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = chatData.senderName,
+                    text = if(chatData.currentPov == "buyer") chatData.seller.name else chatData.buyer.name,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     color = DarkText
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = chatData.productName,
+                    text = chatData.product.name,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = PrimaryBlue,
@@ -363,7 +389,7 @@ fun ChatRowItem(
                 )
                 Spacer(modifier = Modifier.height(3.dp))
                 Text(
-                    text = chatData.lastMessage,
+                    text = chatData.latestMessage?.message ?: "Belum ada pesan",
                     fontSize = 12.sp,
                     color = GrayText,
                     maxLines = 1,
@@ -377,29 +403,24 @@ fun ChatRowItem(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.Center
             ) {
+                val rawTime = chatData.latestMessage?.createdAt ?: "-"
+                val formattedTime = try {
+                    val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                    sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
+                    val date = sdf.parse(rawTime)
+                    if (date != null) {
+                        val outSdf = SimpleDateFormat("HH:mm", Locale.getDefault())
+                        outSdf.timeZone = java.util.TimeZone.getDefault()
+                        outSdf.format(date)
+                    } else rawTime
+                } catch (e: Exception) {
+                    rawTime.take(16) // fallback trim seconds
+                }
                 Text(
-                    text = chatData.time,
+                    text = formattedTime,
                     fontSize = 11.sp,
                     color = GrayText
                 )
-                Spacer(modifier = Modifier.height(6.dp))
-
-                if (chatData.unreadCount > 0) {
-                    Box(
-                        modifier = Modifier
-                            .size(18.dp)
-                            .clip(CircleShape)
-                            .background(PrimaryBlue),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = chatData.unreadCount.toString(),
-                            color = Color.White,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
             }
 
             Spacer(modifier = Modifier.width(4.dp))

@@ -18,6 +18,7 @@ import androidx.navigation.NavController
 import com.Kelompok4.semart.R
 import com.Kelompok4.semart.navigation.Screen
 import kotlinx.coroutines.delay
+import com.Kelompok4.semart.ui.theme.*
 
 @Composable
 fun SplashScreen(

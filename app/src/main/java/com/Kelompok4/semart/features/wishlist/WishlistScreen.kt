@@ -25,46 +25,34 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.Kelompok4.semart.R
-
-// Konstanta Warna SeMart
-val PrimaryBlue = Color(0xFF3B9DF8)
-val DarkText = Color(0xFF243447)
-val GrayText = Color(0xFF6B7280)
-val BorderGray = Color(0xFFE5E7EB)
-val SoftBlueBg = Color(0xFFF3F9FF)
-
-// ── Data model ──
-data class WishlistProduct(
-    val id: Int,
-    val name: String,
-    val price: String,
-    val condition: String,
-    val imageResId: Int
-)
+import com.Kelompok4.semart.data.model.Wishlist
+import com.Kelompok4.semart.features.wishlist.WishlistViewModel
+import com.Kelompok4.semart.features.wishlist.WishlistState
+import com.Kelompok4.semart.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WishlistScreen(
+    viewModel: WishlistViewModel = viewModel(),
     onBackClick: () -> Unit = {},
-    onHomeClick: () -> Unit = {},
     onSearchClick: () -> Unit = {},
-    onChatClick: () -> Unit = {},
     onProductClick: (Int) -> Unit = {}
 ) {
-    val initialItems = remember {
-        mutableStateListOf(
-            WishlistProduct(1, "Jaket Denim Pria Slim Fit", "Rp 85.000", "Bekas Seperti Baru", R.drawable.login_illustration),
-            WishlistProduct(2, "Kipas Angin Meja Sekai", "Rp 75.000", "Bekas Baik", R.drawable.login_illustration),
-            WishlistProduct(3, "Buku Analisis Algoritma", "Rp 35.000", "Bekas Layak Pakai", R.drawable.login_illustration),
-            WishlistProduct(4, "Meja Belajar Lipat Kayu", "Rp 45.000", "Bekas Baik", R.drawable.login_illustration),
-            WishlistProduct(5, "Router Wifi TP-Link Bekas", "Rp 120.000", "Bekas Seperti Baru", R.drawable.login_illustration)
-        )
+    val state by viewModel.state.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadWishlist()
     }
 
-    var showRemoveDialog by remember { mutableStateOf<WishlistProduct?>(null) }
+    val initialItems = if (state is WishlistState.Success) {
+        (state as WishlistState.Success).wishlist
+    } else emptyList()
 
-    // Remove confirmation dialog (Tombol konfirmasi diubah menjadi Biru)
+    var showRemoveDialog by remember { mutableStateOf<Wishlist?>(null) }
+
     showRemoveDialog?.let { product ->
         AlertDialog(
             onDismissRequest = { showRemoveDialog = null },
@@ -80,7 +68,7 @@ fun WishlistScreen(
             },
             text = {
                 Text(
-                    text = "\"${product.name}\" akan dihapus dari wishlist kamu.",
+                    text = "\"${product.product.name}\" akan dihapus dari wishlist kamu.",
                     fontSize = 13.sp,
                     color = GrayText,
                     lineHeight = 18.sp
@@ -89,7 +77,7 @@ fun WishlistScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        initialItems.remove(product)
+                        viewModel.removeWishlist(product.product.id)
                         showRemoveDialog = null
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue), // Diubah ke Biru Utama
@@ -107,7 +95,7 @@ fun WishlistScreen(
     }
 
     Scaffold(
-        containerColor = Color.White, // Perubahan 1: Background halaman jadi Putih
+        containerColor = Color.White,
         topBar = {
             Surface(
                 color = Color.White,
@@ -120,7 +108,6 @@ fun WishlistScreen(
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Perubahan 2: Panah kembali biasa (Tanpa background/kotak & warna Hitam)
                     IconButton(
                         onClick = onBackClick,
                         modifier = Modifier.size(24.dp)
@@ -149,45 +136,35 @@ fun WishlistScreen(
                             fontWeight = FontWeight.Medium
                         )
                     }
-
-                    // Perubahan 3: Ikon love merah di pojok kanan atas dihapus total
-                }
-            }
-        },
-        bottomBar = {
-            Surface(
-                color = Color.White,
-                shadowElevation = 8.dp,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, BorderGray, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(72.dp)
-                        .padding(horizontal = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceAround,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        WishNavItem(selected = false, icon = Icons.Filled.Home, label = "Beranda", onClick = onHomeClick)
-                    }
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        WishNavItem(selected = false, icon = Icons.Filled.Search, label = "Cari", onClick = onSearchClick)
-                    }
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        WishNavItem(selected = false, icon = Icons.Filled.Chat, label = "Chat", onClick = onChatClick)
-                    }
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        WishNavItem(selected = false, icon = Icons.Filled.Person, label = "Profil")
-                    }
                 }
             }
         }
     ) { innerPadding ->
-
-        if (initialItems.isEmpty()) {
+        when (state) {
+            is WishlistState.Loading -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .background(Color.White),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = PrimaryBlue)
+                }
+            }
+            is WishlistState.Error -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .background(Color.White),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text((state as WishlistState.Error).message, color = Color.Red)
+                }
+            }
+            is WishlistState.Success -> {
+                if (initialItems.isEmpty()) {
             // ── Empty State ──
             Box(
                 modifier = Modifier
@@ -240,36 +217,38 @@ fun WishlistScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Jelajahi Produk", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                     }
-                }
-            }
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.White)
-                    .padding(innerPadding)
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(top = 14.dp, bottom = 20.dp)
-            ) {
-                items(initialItems, key = { it.id }) { product ->
-                    WishlistCard(
-                        product = product,
-                        onClick = { onProductClick(product.id) },
-                        onRemove = { showRemoveDialog = product }
-                    )
-                }
-            }
-        }
-    }
-}
+                    } // closes Column
+                } // closes Box
+            } else { // closes if
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.White)
+                        .padding(innerPadding)
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(top = 14.dp, bottom = 20.dp)
+                ) {
+                    items(initialItems, key = { it.wishlistId }) { product ->
+                        WishlistCard(
+                            product = product,
+                            onClick = { onProductClick(product.product.id) },
+                            onRemove = { showRemoveDialog = product }
+                        )
+                    }
+                } // closes LazyVerticalGrid
+            } // closes else
+        } // closes is WishlistState.Success
+        is WishlistState.Idle -> {} // Add exhaustive branch
+    } // closes when
+} // closes Scaffold content
+} // closes WishlistScreen
 
-// ── Perubahan 4: Wishlist Card Meniru Product Card Lain (Tanpa seller, tanpa tombol chat, X di kanan bawah warna Biru) ──
 @Composable
 fun WishlistCard(
-    product: WishlistProduct,
+    product: Wishlist,
     onClick: () -> Unit,
     onRemove: () -> Unit
 ) {
@@ -285,31 +264,43 @@ fun WishlistCard(
         Box(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.clickable { onClick() }) {
                 // Product image area
-                Image(
-                    painter = painterResource(id = product.imageResId),
-                    contentDescription = "Foto Produk",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(110.dp)
-                        .background(Color(0xFFF8FAFC)),
-                    contentScale = ContentScale.Fit
-                )
+                if (product.product.imageUrl.isNotEmpty()) {
+                    AsyncImage(
+                        model = product.product.imageUrl,
+                        contentDescription = "Foto Produk",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(110.dp)
+                            .background(Color(0xFFF8FAFC)),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = R.drawable.login_illustration),
+                        contentDescription = "Foto Produk Default",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(110.dp)
+                            .background(Color(0xFFF8FAFC)),
+                        contentScale = ContentScale.Fit
+                    )
+                }
 
-                Column(modifier = Modifier.padding(10.dp)) {
+                Column(modifier = Modifier.padding(12.dp)) {
                     Text(
-                        text = product.name,
-                        fontSize = 12.sp,
+                        text = product.product.name,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = DarkText,
-                        maxLines = 2,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         lineHeight = 16.sp
                     )
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
 
                     Text(
-                        text = product.price,
+                        text = product.product.priceLabel,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = PrimaryBlue
@@ -322,23 +313,21 @@ fun WishlistCard(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
                             .background(SoftBlueBg)
-                            .padding(horizontal = 6.dp, vertical = 3.dp)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = product.condition,
-                            fontSize = 9.sp,
+                            text = product.product.condition.replace("_", " ").split(" ").joinToString(" ") { it.replaceFirstChar { char -> char.uppercase() } },
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Medium,
                             color = PrimaryBlue,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
-
-                    Spacer(modifier = Modifier.height(6.dp))
                 }
             }
 
-            // Tombol X (Hapus) diletakkan di Pojok Kanan Bawah, Berwarna Biru dengan background soft blue
+            // Tombol X (Hapus)
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
@@ -355,42 +344,6 @@ fun WishlistCard(
                     modifier = Modifier.size(16.dp)
                 )
             }
-        }
-    }
-}
-
-// ── REUSABLE: Nav Item ──
-@Composable
-fun WishNavItem(
-    selected: Boolean,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    onClick: () -> Unit = {}
-) {
-    Box(
-        modifier = Modifier
-            .size(height = 64.dp, width = 62.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = if (selected) PrimaryBlue else Color(0xFFA1ACB8),
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = label,
-                fontSize = 10.sp,
-                color = if (selected) PrimaryBlue else GrayText,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium
-            )
         }
     }
 }
