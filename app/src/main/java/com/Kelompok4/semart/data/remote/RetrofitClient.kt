@@ -6,6 +6,7 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import com.Kelompok4.semart.BuildConfig
 
 // ── Session Manager — simpan & ambil token dari SharedPreferences ─────────────
 
@@ -48,7 +49,7 @@ object SessionManager {
 object RetrofitClient {
 
     // Ganti IP dengan IP laptop (hasil ipconfig)
-    private const val BASE_URL = "http://10.0.2.2/praktikum-rpl-B-4/src/public/api/"
+    private const val BASE_URL = BuildConfig.BASE_URL
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
