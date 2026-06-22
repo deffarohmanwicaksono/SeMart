@@ -18,6 +18,12 @@ val CardBorder    = Color(0xFFE2E8F0)
 val DividerColor  = Color(0xFFF1F5F9)
 val BgInput       = Color(0xFFF8FAFC) // Dibutuhkan oleh LoginScreen
 
+// ─── Warna Netral ───
+val NetralBg        = Color(0xFFE5E7EB)
+val NetralBorder    = Color(0xFF94A3B8)
+val NetralText      = Color(0xFF475569)
+
+
 // ─── Warna Status Peringatan (Warning) ───
 val WarnBg        = Color(0xFFFFFBEB)
 val WarnBorder    = Color(0xFFFCD34D)

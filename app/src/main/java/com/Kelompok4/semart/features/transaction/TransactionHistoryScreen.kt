@@ -39,6 +39,7 @@ import com.Kelompok4.semart.ui.theme.*
 
 // ── Data Model ──
 enum class TransactionStatus(val displayName: String) {
+    BAYAR("Menunggu Pembayaran"),
     MENUNGGU("Menunggu Konfirmasi"),
     SELESAI("Selesai"),
     GAGAL("Gagal")
@@ -46,10 +47,11 @@ enum class TransactionStatus(val displayName: String) {
 
 private fun mapStatus(apiStatus: String): TransactionStatus {
     return when (apiStatus) {
-        "menunggu_pembayaran", "dibayar" -> TransactionStatus.MENUNGGU
+        "menunggu_pembayaran" -> TransactionStatus.BAYAR
+        "dibayar" -> TransactionStatus.MENUNGGU
         "selesai" -> TransactionStatus.SELESAI
         "gagal" -> TransactionStatus.GAGAL
-        else -> TransactionStatus.MENUNGGU
+        else -> TransactionStatus.BAYAR
     }
 }
 
@@ -82,7 +84,7 @@ fun TransactionHistoryScreen(
         (state as TransactionState.Success).transactions
     } else emptyList()
 
-    val filters = listOf("Semua", "Menunggu", "Selesai", "Gagal")
+    val filters = listOf("Semua", "Bayar", "Menunggu", "Selesai", "Gagal")
     var selectedFilter by remember { mutableStateOf(filters[0]) }
 
     var selectedTransaction by remember { mutableStateOf<Transaction?>(null) }
@@ -92,6 +94,7 @@ fun TransactionHistoryScreen(
     } else {
         allTransactions.filter {
             when (selectedFilter) {
+                "Bayar" -> mapStatus(it.status) == TransactionStatus.BAYAR
                 "Menunggu" -> mapStatus(it.status) == TransactionStatus.MENUNGGU
                 "Selesai" -> mapStatus(it.status) == TransactionStatus.SELESAI
                 "Gagal" -> mapStatus(it.status) == TransactionStatus.GAGAL
@@ -317,6 +320,7 @@ fun FilterChipItem(text: String, isSelected: Boolean, onClick: () -> Unit) {
 @Composable
 fun StatusChip(status: TransactionStatus) {
     val (bgColor, contentColor, icon) = when (status) {
+        TransactionStatus.BAYAR -> Triple(NetralBg, NetralText, Icons.Outlined.AccessTime)
         TransactionStatus.MENUNGGU -> Triple(WarnBg, WarnText, Icons.Outlined.AccessTime)
         TransactionStatus.SELESAI -> Triple(SuccessBg, SuccessText, Icons.Filled.CheckCircle)
         TransactionStatus.GAGAL -> Triple(DangerBg, DangerText, Icons.Outlined.Cancel)
@@ -419,6 +423,7 @@ fun TransactionDetailModal(
                 // Detail Meta
                 MetaRow(label = "Status", value = transaction.statusLabel,
                     valueColor = when(uiStatus) {
+                        TransactionStatus.BAYAR -> WarnText
                         TransactionStatus.MENUNGGU -> WarnText
                         TransactionStatus.SELESAI -> SuccessText
                         TransactionStatus.GAGAL -> DangerText
@@ -448,6 +453,13 @@ fun TransactionDetailModal(
 
                 // Alert Info berdasarkan status
                 when (uiStatus) {
+                    TransactionStatus.BAYAR -> {
+                        InfoAlertCard(
+                            bg = NetralBg, border = NetralBorder, iconColor = NetralText, icon = Icons.Outlined.AccessTime,
+                            title = "Menunggu Pembayaran",
+                            body = "Silakan lakukan pembayaran dan unggah bukti pembayaran."
+                        )
+                    }
                     TransactionStatus.MENUNGGU -> {
                         InfoAlertCard(
                             bg = WarnBg, border = WarnBorder, iconColor = WarnText, icon = Icons.Outlined.AccessTime,
