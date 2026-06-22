@@ -26,7 +26,11 @@ class NotificationViewModel(private val repository: NotificationRepository = Not
         _state.value = NotificationState.Loading
         viewModelScope.launch {
             repository.getNotifications().fold(
-                onSuccess = { _state.value = NotificationState.Success(it) },
+                onSuccess = {
+                    _state.value = NotificationState.Success(it)
+                    // Backend marks all as read when fetching, so reset badge
+                    _unreadCount.value = 0
+                },
                 onFailure = { _state.value = NotificationState.Error(it.message ?: "Gagal memuat notifikasi") }
             )
         }

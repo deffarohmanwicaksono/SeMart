@@ -65,7 +65,9 @@ interface ApiService {
     // ── Chat ──────────────────────────────────────────────────────────────────
 
     @GET("chat")
-    suspend fun getChatList(): Response<ChatListResponse>
+    suspend fun getChatList(
+        @Query("pov") pov: String? = null
+    ): Response<ChatListResponse>
 
     @POST("chat")
     suspend fun createChat(
@@ -115,6 +117,12 @@ interface ApiService {
 
     @GET("purchase-history")
     suspend fun getPurchaseHistory(): Response<TransactionListResponse>
+
+    @POST("transaction/{transactionId}/review")
+    suspend fun postReview(
+        @Path("transactionId") transactionId: Int,
+        @Body body: ReviewRequest
+    ): Response<MessageResponse>
 
     // ── Laporan ───────────────────────────────────────────────────────────────
 

@@ -22,6 +22,7 @@ data class Transaction(
     @SerializedName("time_label")        val timeLabel: String? = null,
     @SerializedName("paid_at")           val paidAt: String? = null,
     @SerializedName("completed_at")      val completedAt: String? = null,
+    @SerializedName("review")            val review: Review? = null,
 )
 
 data class TransactionProduct(

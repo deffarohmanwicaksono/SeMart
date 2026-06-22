@@ -388,13 +388,34 @@ fun ChatRowItem(
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(3.dp))
-                Text(
-                    text = chatData.latestMessage?.message ?: "Belum ada pesan",
-                    fontSize = 12.sp,
-                    color = GrayText,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                val rawMsg = chatData.latestMessage?.message ?: ""
+                val isPurchaseLink = rawMsg.startsWith("[PURCHASE_LINK:")
+                if (isPurchaseLink) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Filled.Link,
+                            contentDescription = null,
+                            tint = PrimaryBlue,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Link Pembelian",
+                            fontSize = 12.sp,
+                            color = GrayText,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1
+                        )
+                    }
+                } else {
+                    Text(
+                        text = rawMsg.ifEmpty { "Belum ada pesan" },
+                        fontSize = 12.sp,
+                        color = GrayText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.width(8.dp))
