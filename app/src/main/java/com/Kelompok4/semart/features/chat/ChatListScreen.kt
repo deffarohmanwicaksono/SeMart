@@ -406,11 +406,9 @@ fun ChatRowItem(
                 val rawTime = chatData.latestMessage?.createdAt ?: "-"
                 val formattedTime = try {
                     val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-                    sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
                     val date = sdf.parse(rawTime)
                     if (date != null) {
                         val outSdf = SimpleDateFormat("HH:mm", Locale.getDefault())
-                        outSdf.timeZone = java.util.TimeZone.getDefault()
                         outSdf.format(date)
                     } else rawTime
                 } catch (e: Exception) {
