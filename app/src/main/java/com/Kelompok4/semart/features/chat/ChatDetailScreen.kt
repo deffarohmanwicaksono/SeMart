@@ -17,6 +17,8 @@ import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Store
+import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -39,6 +41,7 @@ import coil.compose.AsyncImage
 import com.Kelompok4.semart.ui.theme.*
 import com.Kelompok4.semart.features.chat.ChatViewModel
 import com.Kelompok4.semart.features.chat.ChatState
+import com.Kelompok4.semart.data.remote.WebSocketStatus
 
 // ==========================================
 // MODEL DATA & ENUM
@@ -84,11 +87,24 @@ fun ChatDetailScreen(
     onNavigateToCheckout: (String) -> Unit = {}
 ) {
     val state by viewModel.state.collectAsState()
+    val wsStatus by viewModel.wsStatus.collectAsState()
     var messageText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
 
-    LaunchedEffect(chatId) {
+    // Hubungkan WebSocket saat screen dibuka, putuskan saat ditinggalkan
+    DisposableEffect(chatId) {
+        viewModel.connectWebSocket(chatId)
         viewModel.loadChatSession(chatId)
+        onDispose {
+            viewModel.disconnectWebSocket()
+        }
+    }
+
+    // Auto-scroll ke bawah saat ada pesan baru
+    val messages = (state as? ChatState.ChatDetailSuccess)?.session?.messages
+    LaunchedEffect(messages?.size) {
+        val size = messages?.size ?: 0
+        if (size > 0) listState.animateScrollToItem(size - 1)
     }
 
     if (state is ChatState.Loading) {
@@ -224,6 +240,31 @@ fun ChatDetailScreen(
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
+                    }
+
+                    // ── Indikator status WebSocket ──
+                    val (wsIcon, wsColor, wsLabel) = when (wsStatus) {
+                        is WebSocketStatus.Subscribed  -> Triple(Icons.Filled.Wifi,    Color(0xFF22C55E), "Live")
+                        is WebSocketStatus.Connected,
+                        is WebSocketStatus.Connecting  -> Triple(Icons.Filled.Wifi,    Color(0xFFF59E0B), "...")
+                        else                           -> Triple(Icons.Filled.WifiOff, Color(0xFFEF4444), "Off")
+                    }
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(end = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = wsIcon,
+                            contentDescription = wsLabel,
+                            tint = wsColor,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = wsLabel,
+                            fontSize = 9.sp,
+                            color = wsColor,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
                 }
             }

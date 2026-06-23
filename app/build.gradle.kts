@@ -16,6 +16,18 @@ val baseUrl =
     localProperties.getProperty("BASE_URL")
         ?: "http://10.0.2.2:8000/api/"
 
+val reverbHost =
+    localProperties.getProperty("REVERB_HOST")
+        ?: "10.0.2.2"
+
+val reverbPort =
+    localProperties.getProperty("REVERB_PORT")
+        ?: "8080"
+
+val reverbAppKey =
+    localProperties.getProperty("REVERB_APP_KEY")
+        ?: "myreverbkey"
+
 android {
     namespace = "com.Kelompok4.semart"
     compileSdk = 37
@@ -31,6 +43,21 @@ android {
             "String",
             "BASE_URL",
             "\"$baseUrl\""
+        )
+        buildConfigField(
+            "String",
+            "REVERB_HOST",
+            "\"$reverbHost\""
+        )
+        buildConfigField(
+            "String",
+            "REVERB_PORT",
+            "\"$reverbPort\""
+        )
+        buildConfigField(
+            "String",
+            "REVERB_APP_KEY",
+            "\"$reverbAppKey\""
         )
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
