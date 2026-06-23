@@ -55,7 +55,6 @@ fun SearchScreen(
     val state by viewModel.state.collectAsState()
     val scope = rememberCoroutineScope()
     var searchQuery by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf("Semua") }
 
     // State Dropdown Urutkan
     var sortMenuExpanded by remember { mutableStateOf(false) }
@@ -63,10 +62,9 @@ fun SearchScreen(
 
     // State untuk daftar riwayat pencarian
     val recentSearches = remember {
-        mutableStateListOf("Kipas angin", "Kasur kos", "Buku pemrograman", "Meja lipat")
+        mutableStateListOf("Kipas angin", "Tas", "Cermin", "Lampu belajar")
     }
 
-    val categories = listOf("Semua", "Elektronik", "Buku", "Peralatan Kost", "Pakaian", "Olahraga", "Hobi", "Kecantikan", "Lainnya")
     val sortOptions = listOf("Termurah", "Termahal", "Terbaru", "Terlama")
 
     Scaffold(
@@ -99,7 +97,7 @@ fun SearchScreen(
                         onValueChange = { 
                             searchQuery = it 
                             if(it.isNotEmpty()) {
-                                viewModel.searchProducts(it, if(selectedCategory == "Semua") null else selectedCategory.lowercase(), if(selectedSort == "Terbaru") null else selectedSort.lowercase())
+                                viewModel.searchProducts(it, null, if(selectedSort == "Terbaru") null else selectedSort.lowercase())
                             }
                         },
                         textStyle = LocalTextStyle.current.copy(fontSize = 13.sp, color = DarkText),
@@ -170,7 +168,7 @@ fun SearchScreen(
                                         selectedSort = option
                                         sortMenuExpanded = false
                                         if(searchQuery.isNotEmpty()) {
-                                            viewModel.searchProducts(searchQuery, if(selectedCategory == "Semua") null else selectedCategory.lowercase(), if(option == "Terbaru") null else option.lowercase())
+                                            viewModel.searchProducts(searchQuery, null, if(option == "Terbaru") null else option.lowercase())
                                         }
                                     }
                                 )
@@ -251,7 +249,7 @@ fun SearchScreen(
                                         .fillMaxWidth()
                                         .clickable { 
                                             searchQuery = searchHint 
-                                            viewModel.searchProducts(searchHint, if(selectedCategory == "Semua") null else selectedCategory.lowercase(), if(selectedSort == "Terbaru") null else selectedSort.lowercase())
+                                            viewModel.searchProducts(searchHint, null, if(selectedSort == "Terbaru") null else selectedSort.lowercase())
                                         }
                                         .padding(vertical = 10.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -274,43 +272,8 @@ fun SearchScreen(
                         }
                     } else {
                         // TAMPILAN KETIKA ADA HASIL PENCARIAN
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
 
-                        // Kategori
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            items(categories) { category ->
-                                val isSelected = selectedCategory == category
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(20.dp))
-                                        .background(if (isSelected) PrimaryBlue else Color.White)
-                                        .border(
-                                            width = 1.dp,
-                                            color = if (isSelected) Color.Transparent else PrimaryBlue,
-                                            shape = RoundedCornerShape(20.dp)
-                                        )
-                                        .clickable { 
-                                            selectedCategory = category 
-                                            if(searchQuery.isNotEmpty()) {
-                                                viewModel.searchProducts(searchQuery, if(category == "Semua") null else category.lowercase(), if(selectedSort == "Terbaru") null else selectedSort.lowercase())
-                                            }
-                                        }
-                                        .padding(horizontal = 14.dp, vertical = 6.dp)
-                                ) {
-                                    Text(
-                                        text = category,
-                                        fontSize = 12.sp,
-                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                                        color = if (isSelected) Color.White else PrimaryBlue
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(20.dp))
                         Text(
                             text = "Hasil Pencarian: \"$searchQuery\"",
                             fontSize = 14.sp,
@@ -355,7 +318,7 @@ fun SearchScreen(
                                         scope.launch {
                                             wishlistViewModel.toggleWishlist(product.id)
                                             // Panggil ulang pencarian untuk merefresh state
-                                            viewModel.searchProducts(searchQuery, if(selectedCategory == "Semua") null else selectedCategory.lowercase(), if(selectedSort == "Terbaru") null else selectedSort.lowercase())
+                                            viewModel.searchProducts(searchQuery, null, if(selectedSort == "Terbaru") null else selectedSort.lowercase())
                                         }
                                     },
                                     modifier = Modifier.clickable { onProductClick(product.id) }
