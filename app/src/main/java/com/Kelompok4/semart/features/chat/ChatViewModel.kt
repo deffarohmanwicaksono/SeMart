@@ -24,7 +24,7 @@ class ChatViewModel(private val repository: ChatRepository = ChatRepository()) :
     fun loadChatList() {
         _state.value = ChatState.Loading
         viewModelScope.launch {
-            repository.getChatList().fold(
+            repository.getChatList(pov = "buyer").fold(
                 onSuccess = { _state.value = ChatState.ChatListSuccess(it) },
                 onFailure = { _state.value = ChatState.Error(it.message ?: "Failed to load chats") }
             )

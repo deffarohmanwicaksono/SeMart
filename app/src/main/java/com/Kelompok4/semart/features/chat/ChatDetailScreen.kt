@@ -126,15 +126,12 @@ fun ChatDetailScreen(
             var dateHeader = ""
             try {
                 val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-                sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
                 val date = sdf.parse(msg.createdAt ?: "")
                 if (date != null) {
                     val timeSdf = SimpleDateFormat("HH:mm", Locale.getDefault())
-                    timeSdf.timeZone = java.util.TimeZone.getDefault()
                     formattedTime = timeSdf.format(date)
                     
                     val dateSdf = SimpleDateFormat("dd MMMM yyyy", Locale("id", "ID"))
-                    dateSdf.timeZone = java.util.TimeZone.getDefault()
                     dateHeader = dateSdf.format(date)
                 }
             } catch (e: Exception) {

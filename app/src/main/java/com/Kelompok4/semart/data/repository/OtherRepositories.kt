@@ -51,4 +51,17 @@ class TransactionRepository {
             Result.failure(e)
         }
     }
+
+    suspend fun postReview(transactionId: Int, rating: Int, comment: String?): Result<String> {
+        return try {
+            val response = api.postReview(transactionId, com.Kelompok4.semart.data.remote.ReviewRequest(rating, comment))
+            if (response.isSuccessful) {
+                Result.success(response.body()!!.message)
+            } else {
+                Result.failure(Exception("Gagal mengirim ulasan: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

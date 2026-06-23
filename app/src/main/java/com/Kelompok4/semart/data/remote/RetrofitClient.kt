@@ -48,7 +48,6 @@ object SessionManager {
 
 object RetrofitClient {
 
-    // Ganti IP dengan IP laptop (hasil ipconfig)
     private const val BASE_URL = BuildConfig.BASE_URL
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {

@@ -28,4 +28,18 @@ class TransactionViewModel(private val repository: TransactionRepository = Trans
             )
         }
     }
+
+    fun postReview(transactionId: Int, rating: Int, comment: String?) {
+        _state.value = TransactionState.Loading
+        viewModelScope.launch {
+            repository.postReview(transactionId, rating, comment).fold(
+                onSuccess = {
+                    loadPurchaseHistory() // Refresh data
+                },
+                onFailure = {
+                    _state.value = TransactionState.Error(it.message ?: "Gagal mengirim ulasan")
+                }
+            )
+        }
+    }
 }

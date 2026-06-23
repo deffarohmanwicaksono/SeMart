@@ -52,7 +52,6 @@ fun NotificationScreen(
 
     LaunchedEffect(Unit) {
         viewModel.loadNotifications()
-        viewModel.fetchUnreadCount()
     }
 
     val notifications = remember(state) {

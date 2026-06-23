@@ -66,7 +66,7 @@ fun SearchScreen(
         mutableStateListOf("Kipas angin", "Kasur kos", "Buku pemrograman", "Meja lipat")
     }
 
-    val categories = listOf("Semua", "Elektronik", "Buku", "Perlengkapan Kos", "Fashion", "Olahraga", "Hobi", "Kecantikan", "Lainnya")
+    val categories = listOf("Semua", "Elektronik", "Buku", "Peralatan Kost", "Pakaian", "Olahraga", "Hobi", "Kecantikan", "Lainnya")
     val sortOptions = listOf("Termurah", "Termahal", "Terbaru", "Terlama")
 
     Scaffold(

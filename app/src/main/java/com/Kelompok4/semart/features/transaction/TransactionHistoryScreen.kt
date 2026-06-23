@@ -39,6 +39,7 @@ import com.Kelompok4.semart.ui.theme.*
 
 // ── Data Model ──
 enum class TransactionStatus(val displayName: String) {
+    BAYAR("Menunggu Pembayaran"),
     MENUNGGU("Menunggu Konfirmasi"),
     SELESAI("Selesai"),
     GAGAL("Gagal")
@@ -46,10 +47,11 @@ enum class TransactionStatus(val displayName: String) {
 
 private fun mapStatus(apiStatus: String): TransactionStatus {
     return when (apiStatus) {
-        "menunggu_pembayaran", "dibayar" -> TransactionStatus.MENUNGGU
+        "menunggu_pembayaran" -> TransactionStatus.BAYAR
+        "dibayar" -> TransactionStatus.MENUNGGU
         "selesai" -> TransactionStatus.SELESAI
         "gagal" -> TransactionStatus.GAGAL
-        else -> TransactionStatus.MENUNGGU
+        else -> TransactionStatus.BAYAR
     }
 }
 
@@ -82,16 +84,19 @@ fun TransactionHistoryScreen(
         (state as TransactionState.Success).transactions
     } else emptyList()
 
-    val filters = listOf("Semua", "Menunggu", "Selesai", "Gagal")
+    val filters = listOf("Semua", "Bayar", "Menunggu", "Selesai", "Gagal")
     var selectedFilter by remember { mutableStateOf(filters[0]) }
 
     var selectedTransaction by remember { mutableStateOf<Transaction?>(null) }
+    var transactionForReview by remember { mutableStateOf<Transaction?>(null) }
+    var transactionForViewReview by remember { mutableStateOf<Transaction?>(null) }
 
     val displayedTransactions = if (selectedFilter == "Semua") {
         allTransactions
     } else {
         allTransactions.filter {
             when (selectedFilter) {
+                "Bayar" -> mapStatus(it.status) == TransactionStatus.BAYAR
                 "Menunggu" -> mapStatus(it.status) == TransactionStatus.MENUNGGU
                 "Selesai" -> mapStatus(it.status) == TransactionStatus.SELESAI
                 "Gagal" -> mapStatus(it.status) == TransactionStatus.GAGAL
@@ -187,7 +192,9 @@ fun TransactionHistoryScreen(
                         items(displayedTransactions, key = { it.id }) { transaction ->
                             TransactionCard(
                                 transaction = transaction,
-                                onClick = { selectedTransaction = transaction }
+                                onClick = { selectedTransaction = transaction },
+                                onReviewClick = { transactionForReview = transaction },
+                                onViewReviewClick = { transactionForViewReview = transaction }
                             )
                         }
                     }
@@ -203,13 +210,35 @@ fun TransactionHistoryScreen(
             onDismiss = { selectedTransaction = null }
         )
     }
+
+    // Modal Submit Review
+    transactionForReview?.let { transaction ->
+        ReviewSubmissionModal(
+            transaction = transaction,
+            onDismiss = { transactionForReview = null },
+            onSubmit = { rating, comment ->
+                viewModel.postReview(transaction.id, rating, comment)
+                transactionForReview = null
+            }
+        )
+    }
+
+    // Modal View Review
+    transactionForViewReview?.let { transaction ->
+        ViewReviewModal(
+            transaction = transaction,
+            onDismiss = { transactionForViewReview = null }
+        )
+    }
 }
 
 // ── Komponen Card Transaksi (Sesuai Desain UI) ──
 @Composable
 fun TransactionCard(
     transaction: Transaction,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onReviewClick: () -> Unit,
+    onViewReviewClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -263,16 +292,61 @@ fun TransactionCard(
                     color = GrayText
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                StatusChip(status = mapStatus(transaction.status))
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(text = transaction.dateLabel ?: transaction.date ?: "-", fontSize = 11.sp, color = GrayText)
-                    Text(text = transaction.priceLabel, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = PrimaryBlue)
+                
+                val isSelesai = mapStatus(transaction.status) == TransactionStatus.SELESAI
+                
+                if (isSelesai) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        StatusChip(status = TransactionStatus.SELESAI)
+                        Text(text = transaction.priceLabel, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = PrimaryBlue, fontFamily = Poppins)
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = transaction.dateLabel ?: transaction.date ?: "-", fontSize = 11.sp, color = GrayText, fontFamily = Poppins)
+                        if (transaction.review == null) {
+                            Button(
+                                onClick = onReviewClick,
+                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                                modifier = Modifier.height(28.dp)
+                            ) {
+                                Text("Ulasan", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, fontFamily = Poppins)
+                            }
+                        } else {
+                            OutlinedButton(
+                                onClick = onViewReviewClick,
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryBlue),
+                                border = BorderStroke(1.dp, PrimaryBlue),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                                modifier = Modifier.height(28.dp)
+                            ) {
+                                Text("Lihat Ulasan", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, fontFamily = Poppins)
+                            }
+                        }
+                    }
+                } else {
+                    StatusChip(status = mapStatus(transaction.status))
+                    Spacer(modifier = Modifier.height(10.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = transaction.dateLabel ?: transaction.date ?: "-", fontSize = 11.sp, color = GrayText, fontFamily = Poppins)
+                        Text(text = transaction.priceLabel, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = PrimaryBlue, fontFamily = Poppins)
+                    }
                 }
             }
 
@@ -317,6 +391,7 @@ fun FilterChipItem(text: String, isSelected: Boolean, onClick: () -> Unit) {
 @Composable
 fun StatusChip(status: TransactionStatus) {
     val (bgColor, contentColor, icon) = when (status) {
+        TransactionStatus.BAYAR -> Triple(NetralBg, NetralText, Icons.Outlined.AccessTime)
         TransactionStatus.MENUNGGU -> Triple(WarnBg, WarnText, Icons.Outlined.AccessTime)
         TransactionStatus.SELESAI -> Triple(SuccessBg, SuccessText, Icons.Filled.CheckCircle)
         TransactionStatus.GAGAL -> Triple(DangerBg, DangerText, Icons.Outlined.Cancel)
@@ -419,6 +494,7 @@ fun TransactionDetailModal(
                 // Detail Meta
                 MetaRow(label = "Status", value = transaction.statusLabel,
                     valueColor = when(uiStatus) {
+                        TransactionStatus.BAYAR -> WarnText
                         TransactionStatus.MENUNGGU -> WarnText
                         TransactionStatus.SELESAI -> SuccessText
                         TransactionStatus.GAGAL -> DangerText
@@ -448,6 +524,13 @@ fun TransactionDetailModal(
 
                 // Alert Info berdasarkan status
                 when (uiStatus) {
+                    TransactionStatus.BAYAR -> {
+                        InfoAlertCard(
+                            bg = NetralBg, border = NetralBorder, iconColor = NetralText, icon = Icons.Outlined.AccessTime,
+                            title = "Menunggu Pembayaran",
+                            body = "Silakan lakukan pembayaran dan unggah bukti pembayaran."
+                        )
+                    }
                     TransactionStatus.MENUNGGU -> {
                         InfoAlertCard(
                             bg = WarnBg, border = WarnBorder, iconColor = WarnText, icon = Icons.Outlined.AccessTime,
@@ -494,6 +577,211 @@ private fun InfoAlertCard(bg: Color, border: Color, iconColor: Color, icon: Imag
             Column {
                 Text(title, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = iconColor)
                 Text(body, fontSize = 11.sp, color = iconColor.copy(alpha = 0.8f), lineHeight = 15.sp, modifier = Modifier.padding(top = 2.dp))
+            }
+        }
+    }
+}
+
+// ── Modals untuk Ulasan ──
+@Composable
+fun ReviewSubmissionModal(
+    transaction: Transaction,
+    onDismiss: () -> Unit,
+    onSubmit: (Int, String) -> Unit
+) {
+    var rating by remember { mutableStateOf(0) }
+    var comment by remember { mutableStateOf("") }
+
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            shape = RoundedCornerShape(16.dp),
+            color = Color.White
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Berikan Ulasan Produk", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = DarkText)
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Filled.Close, contentDescription = "Tutup", tint = GrayText, modifier = Modifier.size(20.dp))
+                    }
+                }
+
+                Divider(color = BorderGray, modifier = Modifier.padding(vertical = 12.dp))
+
+                // Produk Info
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (transaction.product.imageUrl.isNotEmpty()) {
+                        AsyncImage(
+                            model = transaction.product.imageUrl,
+                            contentDescription = "Foto Produk",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(SoftBlueBg)
+                        )
+                    } else {
+                        Image(
+                            painter = painterResource(id = R.drawable.login_illustration),
+                            contentDescription = "Foto Produk",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(SoftBlueBg)
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(transaction.product.name, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = DarkText)
+                        Text(transaction.seller.name ?: "-", fontSize = 11.sp, color = GrayText)
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                Text("Kualitas Produk & Pelayanan", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = DarkText)
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    for (i in 1..5) {
+                        Icon(
+                            imageVector = if (i <= rating) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                            contentDescription = "Star $i",
+                            tint = if (i <= rating) Color(0xFFFFD700) else GrayText,
+                            modifier = Modifier.size(32.dp).clickable { rating = i }
+                        )
+                    }
+                }
+                if (rating == 0) {
+                    Text("Pilih bintang untuk memberi nilai", fontSize = 11.sp, color = GrayText, modifier = Modifier.padding(top = 4.dp))
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                Text("Tulis Ulasan Anda", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = DarkText)
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = comment,
+                    onValueChange = { comment = it },
+                    placeholder = { Text("Bagikan pengalaman Anda saat berbelanja", fontSize = 12.sp, color = GrayText) },
+                    modifier = Modifier.fillMaxWidth().height(100.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp, fontFamily = Poppins, color = DarkText),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = PrimaryBlue,
+                        unfocusedBorderColor = BorderGray
+                    )
+                )
+
+                Spacer(Modifier.height(20.dp))
+
+                Button(
+                    onClick = { onSubmit(rating, comment) },
+                    enabled = rating > 0,
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Kirim Ulasan", fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = Poppins)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ViewReviewModal(
+    transaction: Transaction,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            shape = RoundedCornerShape(16.dp),
+            color = Color.White
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Ulasan Anda", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = DarkText)
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Filled.Close, contentDescription = "Tutup", tint = GrayText, modifier = Modifier.size(20.dp))
+                    }
+                }
+
+                Divider(color = BorderGray, modifier = Modifier.padding(vertical = 12.dp))
+
+                // Produk Info
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (transaction.product.imageUrl.isNotEmpty()) {
+                        AsyncImage(
+                            model = transaction.product.imageUrl,
+                            contentDescription = "Foto Produk",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(SoftBlueBg)
+                        )
+                    } else {
+                        Image(
+                            painter = painterResource(id = R.drawable.login_illustration),
+                            contentDescription = "Foto Produk",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(SoftBlueBg)
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(transaction.product.name, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = DarkText)
+                        Text(transaction.seller.name ?: "-", fontSize = 11.sp, color = GrayText)
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                Text("Kualitas Produk & Pelayanan", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = DarkText)
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val rating = transaction.review?.rating ?: 0
+                    for (i in 1..5) {
+                        Icon(
+                            imageVector = if (i <= rating) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                            contentDescription = "Star $i",
+                            tint = if (i <= rating) Color(0xFFFFD700) else GrayText,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                Text("Ulasan Anda", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = DarkText)
+                Spacer(Modifier.height(8.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFF8FAFC), RoundedCornerShape(8.dp))
+                        .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(8.dp))
+                        .padding(12.dp)
+                ) {
+                    Text(
+                        text = transaction.review?.comment.takeIf { !it.isNullOrBlank() } ?: "Tidak ada komentar",
+                        fontSize = 13.sp,
+                        color = DarkText
+                    )
+                }
+
+                Spacer(Modifier.height(20.dp))
+
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Tutup", fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = Poppins)
+                }
             }
         }
     }

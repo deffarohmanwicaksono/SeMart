@@ -11,9 +11,9 @@ class ChatRepository {
 
     private val api = RetrofitClient.instance
 
-    suspend fun getChatList(): Result<List<Chat>> {
+    suspend fun getChatList(pov: String? = null): Result<List<Chat>> {
         return try {
-            val response = api.getChatList()
+            val response = api.getChatList(pov)
             if (response.isSuccessful) {
                 Result.success(response.body()!!.data)
             } else {

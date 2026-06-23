@@ -20,11 +20,14 @@ import com.Kelompok4.semart.features.transaction.TransactionHistoryScreen
 import com.Kelompok4.semart.features.wishlist.WishlistScreen
 import com.Kelompok4.semart.features.chat.ChatViewModel
 import com.Kelompok4.semart.features.profile.SellerProfileScreen
+import com.Kelompok4.semart.features.notification.NotificationViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun NavGraph() {
     val navController = rememberNavController()
+    // Shared ViewModel so badge syncs between HomeScreen and NotificationScreen
+    val notificationViewModel: NotificationViewModel = viewModel()
 
     NavHost(
         navController = navController,
@@ -55,7 +58,8 @@ fun NavGraph() {
                 onChatClick        = { navController.navigate(Screen.ChatList.route) },
                 onProfileClick     = { navController.navigate(Screen.Profile.route) },
                 onWishlistClick    = { navController.navigate(Screen.Wishlist.route) },
-                onNotificationClick = { navController.navigate(Screen.Notification.route) }
+                onNotificationClick = { navController.navigate(Screen.Notification.route) },
+                notificationViewModel = notificationViewModel
             )
         }
 
@@ -155,6 +159,7 @@ fun NavGraph() {
         // ── Notification ──────────────────────────────────────────────────────
         composable(route = Screen.Notification.route) {
             NotificationScreen(
+                viewModel   = notificationViewModel,
                 onBackClick = { navController.popBackStack() }
             )
         }

@@ -172,6 +172,13 @@ data class TransactionListResponse(
     @SerializedName("data") val data: List<Transaction>,
 )
 
+// ── Review ────────────────────────────────────────────────────────────────────
+
+data class ReviewRequest(
+    @SerializedName("rating") val rating: Int,
+    @SerializedName("comment") val comment: String? = null,
+)
+
 // ── Report ────────────────────────────────────────────────────────────────────
 
 data class ReportRequest(

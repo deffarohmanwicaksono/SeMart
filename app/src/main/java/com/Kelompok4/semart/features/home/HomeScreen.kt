@@ -68,7 +68,7 @@ fun HomeScreen(
     var sortMenuExpanded by remember { mutableStateOf(false) }
     var selectedSort by remember { mutableStateOf("Terbaru") }
 
-    val categories = listOf("Semua", "Elektronik", "Buku", "Perlengkapan Kos", "Fashion", "Olahraga", "Hobi", "Kecantikan", "Lainnya")
+    val categories = listOf("Semua", "Elektronik", "Buku", "Peralatan Kost", "Pakaian", "Olahraga", "Hobi", "Kecantikan", "Lainnya")
     val sortOptions = listOf("Termurah", "Termahal", "Terbaru", "Terlama")
 
     Scaffold(
