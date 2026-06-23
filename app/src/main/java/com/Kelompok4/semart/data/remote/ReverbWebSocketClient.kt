@@ -238,7 +238,8 @@ class ReverbWebSocketClient {
             }
 
             // Event pesan baru dari ChatController Laravel
-            "App\\Events\\MessageSent" -> {
+            // Nama harus sama persis dengan broadcastAs() di App\Events\MessageSent.php
+            "MessageSent" -> {
                 event.data?.let { rawData ->
                     try {
                         // data bisa berupa JSON string atau JSON object

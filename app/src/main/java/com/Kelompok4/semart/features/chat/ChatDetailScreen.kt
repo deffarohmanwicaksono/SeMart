@@ -101,9 +101,9 @@ fun ChatDetailScreen(
     }
 
     // Auto-scroll ke bawah saat ada pesan baru
-    val messages = (state as? ChatState.ChatDetailSuccess)?.session?.messages
-    LaunchedEffect(messages?.size) {
-        val size = messages?.size ?: 0
+    val messagesForScroll = (state as? ChatState.ChatDetailSuccess)?.session?.messages
+    LaunchedEffect(messagesForScroll?.size) {
+        val size = messagesForScroll?.size ?: 0
         if (size > 0) listState.animateScrollToItem(size - 1)
     }
 
@@ -141,18 +141,31 @@ fun ChatDetailScreen(
             var formattedTime = msg.createdAt ?: ""
             var dateHeader = ""
             try {
-                val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-                val date = sdf.parse(msg.createdAt ?: "")
+                // Coba parse berbagai format:
+                // 1. REST API: "yyyy-MM-dd HH:mm:ss"
+                // 2. WebSocket (Reverb): "yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'" (ISO 8601)
+                val formats = listOf(
+                    "yyyy-MM-dd HH:mm:ss",
+                    "yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'",
+                    "yyyy-MM-dd'T'HH:mm:ss'Z'",
+                    "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+                )
+                var date: Date? = null
+                for (fmt in formats) {
+                    try {
+                        date = SimpleDateFormat(fmt, Locale.getDefault()).parse(msg.createdAt ?: "")
+                        if (date != null) break
+                    } catch (_: Exception) {}
+                }
                 if (date != null) {
-                    val timeSdf = SimpleDateFormat("HH:mm", Locale.getDefault())
-                    formattedTime = timeSdf.format(date)
-                    
-                    val dateSdf = SimpleDateFormat("dd MMMM yyyy", Locale("id", "ID"))
-                    dateHeader = dateSdf.format(date)
+                    formattedTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(date)
+                    dateHeader    = SimpleDateFormat("dd MMMM yyyy", Locale("id", "ID")).format(date)
                 }
             } catch (e: Exception) {
-                dateHeader = msg.createdAt?.substringBefore(" ") ?: ""
-                formattedTime = msg.createdAt?.substringAfter(" ")?.take(5) ?: ""
+                // Fallback: ambil tanggal & jam secara manual
+                val raw = msg.createdAt ?: ""
+                dateHeader    = raw.substringBefore("T").ifEmpty { raw.substringBefore(" ") }
+                formattedTime = (if (raw.contains("T")) raw.substringAfter("T") else raw.substringAfter(" ")).take(5)
             }
 
             MessageData(

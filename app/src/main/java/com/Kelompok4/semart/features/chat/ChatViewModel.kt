@@ -77,12 +77,12 @@ class ChatViewModel(
         if (session.messages.any { it.id == incoming.id }) return
 
         val newMessage = Message(
-            id         = incoming.id,
-            senderId   = incoming.senderId,
-            senderName = incoming.senderName,
-            isLink     = incoming.isPurchaseLink,
-            message    = incoming.message,
-            createdAt  = incoming.createdAt
+            id              = incoming.id,
+            senderId        = incoming.senderId,
+            senderName      = incoming.senderName,
+            isPurchaseLink  = incoming.isPurchaseLink,
+            message         = incoming.message,
+            createdAt       = incoming.createdAt
         )
 
         val updatedMessages = session.messages + newMessage
