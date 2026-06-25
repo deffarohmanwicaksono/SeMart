@@ -76,6 +76,14 @@ class ChatViewModel(
         // Cegah duplikat jika pesan sudah ada
         if (session.messages.any { it.id == incoming.id }) return
 
+        // Jika pesan adalah purchase link, reload seluruh sesi dari API
+        // agar mendapatkan data purchase_link lengkap (harga, token, validity)
+        val rawMessage = incoming.message ?: ""
+        if (rawMessage.startsWith("[PURCHASE_LINK:") || incoming.isPurchaseLink) {
+            loadChatSession(activeChatId)
+            return
+        }
+
         val newMessage = Message(
             id              = incoming.id,
             senderId        = incoming.senderId,
@@ -103,11 +111,20 @@ class ChatViewModel(
     }
 
     fun loadChatSession(chatId: Int) {
-        _state.value = ChatState.Loading
+        // Hanya tampilkan loading saat pertama kali buka chat,
+        // bukan saat reload background (misal setelah terima purchase link via WS)
+        if (_state.value !is ChatState.ChatDetailSuccess) {
+            _state.value = ChatState.Loading
+        }
         viewModelScope.launch {
             repository.getChatSession(chatId).fold(
                 onSuccess = { _state.value = ChatState.ChatDetailSuccess(it) },
-                onFailure = { _state.value = ChatState.Error(it.message ?: "Failed to load session") }
+                onFailure = {
+                    // Jangan timpa state jika ini reload background dan gagal
+                    if (_state.value !is ChatState.ChatDetailSuccess) {
+                        _state.value = ChatState.Error(it.message ?: "Failed to load session")
+                    }
+                }
             )
         }
     }
